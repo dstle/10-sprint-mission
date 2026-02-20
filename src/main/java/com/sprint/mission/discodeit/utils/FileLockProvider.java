@@ -1,4 +1,4 @@
-package com.sprint.mission.discodeit.repository.file;
+package com.sprint.mission.discodeit.utils;
 
 import org.springframework.stereotype.Component;
 
@@ -9,6 +9,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 @Component
 public class FileLockProvider {
+
     private final Map<Path, ReentrantLock> locks = new ConcurrentHashMap<>();
 
     public ReentrantLock getLock(Path path) {

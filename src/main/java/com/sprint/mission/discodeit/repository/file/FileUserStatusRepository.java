@@ -3,29 +3,31 @@ package com.sprint.mission.discodeit.repository.file;
 import com.sprint.mission.discodeit.entity.UserStatus;
 import com.sprint.mission.discodeit.repository.UserStatusRepository;
 import com.sprint.mission.discodeit.utils.FileIOHelper;
+import com.sprint.mission.discodeit.utils.FileLockProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Repository;
 
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
 
-public class FileUserStatusRepository implements UserStatusRepository {
+@Repository
+@ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
+public class FileUserStatusRepository extends FileRepositoryLockSupport implements UserStatusRepository {
 
     private static final Path USER_STATUS_DIRECTORY =
             FileIOHelper.resolveDirectory("userStatuses");
-    private final FileLockProvider fileLockProvider;
 
     public FileUserStatusRepository(FileLockProvider fileLockProvider) {
-        this.fileLockProvider = fileLockProvider;
+        super(fileLockProvider);
     }
 
     @Override
     public void save(UserStatus userStatus) {
         Path path = USER_STATUS_DIRECTORY.resolve(userStatus.getId().toString());
 
-        withLock(path, () -> FileIOHelper.save(path, userStatus));
+        withLock(USER_STATUS_DIRECTORY, () -> FileIOHelper.save(path, userStatus));
     }
 
     @Override
@@ -44,7 +46,7 @@ public class FileUserStatusRepository implements UserStatusRepository {
     public void deleteByUserId(UUID userId) {
         findByUserId(userId).ifPresent(status -> {
             Path path = USER_STATUS_DIRECTORY.resolve(status.getId().toString());
-            withLock(path, () -> FileIOHelper.delete(path));
+            withLock(USER_STATUS_DIRECTORY, () -> FileIOHelper.delete(path));
         });
     }
 
@@ -57,32 +59,12 @@ public class FileUserStatusRepository implements UserStatusRepository {
     @Override
     public Optional<UserStatus> findById(UUID id) {
         Path path = USER_STATUS_DIRECTORY.resolve(id.toString());
-        return withLock(path, () -> FileIOHelper.load(path));
+        return withLock(USER_STATUS_DIRECTORY, () -> FileIOHelper.load(path));
     }
 
     @Override
     public void deleteById(UUID userStatusId) {
         Path path = USER_STATUS_DIRECTORY.resolve(userStatusId.toString());
-        withLock(path, () -> FileIOHelper.delete(path));
-    }
-
-    private void withLock(Path path, Runnable action) {
-        ReentrantLock lock = fileLockProvider.getLock(path);
-        lock.lock();
-        try {
-            action.run();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    private <T> T withLock(Path path, Supplier<T> action) {
-        ReentrantLock lock = fileLockProvider.getLock(path);
-        lock.lock();
-        try {
-            return action.get();
-        } finally {
-            lock.unlock();
-        }
+        withLock(USER_STATUS_DIRECTORY, () -> FileIOHelper.delete(path));
     }
 }

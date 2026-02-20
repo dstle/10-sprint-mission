@@ -3,6 +3,9 @@ package com.sprint.mission.discodeit.repository.file;
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.repository.MessageRepository;
 import com.sprint.mission.discodeit.utils.FileIOHelper;
+import com.sprint.mission.discodeit.utils.FileLockProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Repository;
 
 import java.nio.file.Path;
 import java.time.Instant;
@@ -10,31 +13,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
 
-public class FileMessageRepository implements MessageRepository {
+@Repository
+@ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
+public class FileMessageRepository extends FileRepositoryLockSupport implements MessageRepository {
 
     private static final Path MESSAGE_DIRECTORY =
             FileIOHelper.resolveDirectory("messages");
-    private final FileLockProvider fileLockProvider;
 
     public FileMessageRepository(FileLockProvider fileLockProvider) {
-        this.fileLockProvider = fileLockProvider;
+        super(fileLockProvider);
     }
 
     @Override
     public void save(Message message) {
         Path messageFilePath = MESSAGE_DIRECTORY.resolve(message.getId().toString());
 
-        withLock(messageFilePath, () -> FileIOHelper.save(messageFilePath, message));
+        withLock(MESSAGE_DIRECTORY, () -> FileIOHelper.save(messageFilePath, message));
     }
 
     @Override
     public Optional<Message> findById(UUID id) {
         Path messageFilePath = MESSAGE_DIRECTORY.resolve(id.toString());
 
-        return withLock(messageFilePath, () -> FileIOHelper.load(messageFilePath));
+        return withLock(MESSAGE_DIRECTORY, () -> FileIOHelper.load(messageFilePath));
     }
 
     @Override
@@ -46,7 +48,7 @@ public class FileMessageRepository implements MessageRepository {
     public void delete(Message message) {
         Path channelFilePath = MESSAGE_DIRECTORY.resolve(message.getId().toString());
 
-        withLock(channelFilePath, () -> FileIOHelper.delete(channelFilePath));
+        withLock(MESSAGE_DIRECTORY, () -> FileIOHelper.delete(channelFilePath));
     }
 
     @Override
@@ -83,26 +85,6 @@ public class FileMessageRepository implements MessageRepository {
     @Override
     public void deleteById(UUID messageId) {
         Path messagePath = MESSAGE_DIRECTORY.resolve(messageId.toString());
-        withLock(messagePath, () -> FileIOHelper.delete(messagePath));
-    }
-
-    private void withLock(Path path, Runnable action) {
-        ReentrantLock lock = fileLockProvider.getLock(path);
-        lock.lock();
-        try {
-            action.run();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    private <T> T withLock(Path path, Supplier<T> action) {
-        ReentrantLock lock = fileLockProvider.getLock(path);
-        lock.lock();
-        try {
-            return action.get();
-        } finally {
-            lock.unlock();
-        }
+        withLock(MESSAGE_DIRECTORY, () -> FileIOHelper.delete(messagePath));
     }
 }
