@@ -1,8 +1,7 @@
 package com.sprint.mission.discodeit.service.basic;
 
-import com.sprint.mission.discodeit.dto.readstatus.CreateReadStatusRequest;
-import com.sprint.mission.discodeit.dto.readstatus.ReadStatusResponse;
-import com.sprint.mission.discodeit.dto.readstatus.UpdateReadStatusRequest;
+import com.sprint.mission.discodeit.dto.readstatus.ReadStatusCreateRequest;
+import com.sprint.mission.discodeit.dto.readstatus.ReadStatusUpdateRequest;
 import com.sprint.mission.discodeit.entity.ReadStatus;
 import com.sprint.mission.discodeit.repository.ChannelRepository;
 import com.sprint.mission.discodeit.repository.ReadStatusRepository;
@@ -19,23 +18,25 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class BasicReadStatusService implements ReadStatusService {
+
     private final UserRepository userRepository;
     private final ReadStatusRepository readStatusRepository;
     private final ChannelRepository channelRepository;
 
     @Override
-    public UUID createReadStatus(CreateReadStatusRequest request) {
+    public ReadStatus createReadStatus(ReadStatusCreateRequest request) {
         validateUserExists(request.userId());
         validateChannelExists(request.channelId());
         validateDuplicateReadStatus(request);
 
         ReadStatus readStatus = new ReadStatus(
                 request.userId(),
-                request.channelId()
+                request.channelId(),
+                request.lastReadAt()
         );
 
         readStatusRepository.save(readStatus);
-        return readStatus.getId();
+        return readStatus;
     }
 
     private void validateUserExists(UUID userId) {
@@ -52,8 +53,9 @@ public class BasicReadStatusService implements ReadStatusService {
         }
     }
 
-    private void validateDuplicateReadStatus(CreateReadStatusRequest request) {
-        if (readStatusRepository.existsByUserIdAndChannelId(request.userId(), request.channelId())) {
+    private void validateDuplicateReadStatus(ReadStatusCreateRequest request) {
+        if (readStatusRepository.existsByUserIdAndChannelId(request.userId(),
+                request.channelId())) {
             throw new ApiException(ErrorCode.READ_STATUS_ALREADY_EXISTS,
                     "이미 존재하는 readStatus 입니다 userId: " + request.userId()
                             + ", channelId: " + request.channelId());
@@ -61,28 +63,24 @@ public class BasicReadStatusService implements ReadStatusService {
     }
 
     @Override
-    public ReadStatusResponse findReadStatusByReadStatusId(UUID readStatusId) {
+    public ReadStatus findReadStatusByReadStatusId(UUID readStatusId) {
+        return getReadStatusOrThrow(readStatusId);
+    }
+
+    @Override
+    public List<ReadStatus> findAllReadStatusesByUserId(UUID userId) {
+        validateUserExists(userId);
+
+        return readStatusRepository.findAllByUserId(userId);
+    }
+
+    @Override
+    public ReadStatus updateReadStatus(UUID readStatusId, ReadStatusUpdateRequest request) {
         ReadStatus readStatus = getReadStatusOrThrow(readStatusId);
 
-        return ReadStatusResponse.from(readStatus);
-    }
-
-    @Override
-    public List<ReadStatusResponse> findAllReadStatusesByUserId(UUID userId) {
-        List<ReadStatus> readStatuses = readStatusRepository.findAllByUserId(userId);
-
-        return readStatuses.stream()
-                .map(readStatus -> ReadStatusResponse.from(readStatus)
-                ).toList();
-    }
-
-    @Override
-    public ReadStatusResponse updateReadStatus(UpdateReadStatusRequest request) {
-        ReadStatus readStatus = getReadStatusOrThrow(request.id());
-
-        readStatus.updateReadStatusType();
+        readStatus.updateLastReadAt(request.newLastReadAt());
         readStatusRepository.save(readStatus);
-        return ReadStatusResponse.from(readStatus);
+        return readStatus;
     }
 
     @Override

@@ -1,9 +1,13 @@
 package com.sprint.mission.discodeit.service.basic;
 
 import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentRequest;
-import com.sprint.mission.discodeit.dto.message.CreateMessageRequest;
-import com.sprint.mission.discodeit.dto.message.UpdateMessageRequest;
-import com.sprint.mission.discodeit.entity.*;
+import com.sprint.mission.discodeit.dto.message.MessageCreateRequest;
+import com.sprint.mission.discodeit.dto.message.MessageUpdateRequest;
+import com.sprint.mission.discodeit.entity.BinaryContent;
+import com.sprint.mission.discodeit.entity.BinaryContentOwnerType;
+import com.sprint.mission.discodeit.entity.Channel;
+import com.sprint.mission.discodeit.entity.Message;
+import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.repository.BinaryContentRepository;
 import com.sprint.mission.discodeit.repository.ChannelRepository;
 import com.sprint.mission.discodeit.repository.MessageRepository;
@@ -50,18 +54,11 @@ public class BasicMessageServiceTest {
     void setUp() {
         FileIOHelper.flushData();
 
-        User user = new User(
-                "testUser",
-                "1234",
-                "test@test.com"
-        );
+        User user = new User("testUser", "1234", "test@test.com");
         userRepository.save(user);
         userId = user.getId();
 
-        Channel channel = Channel.buildPublic(
-                "test-channel",
-                "test-desc"
-        );
+        Channel channel = Channel.buildPublic("test-channel", "test-desc");
         channelRepository.save(channel);
         channelId = channel.getId();
     }
@@ -70,25 +67,16 @@ public class BasicMessageServiceTest {
     @MethodSource("createMessageProvider")
     @DisplayName("메시지 생성 성공")
     void createMessage_success(List<BinaryContentRequest> attachments) {
+        MessageCreateRequest request = new MessageCreateRequest("hello world", channelId, userId);
 
-        // given
-        CreateMessageRequest request =
-                new CreateMessageRequest(
-                        channelId,
-                        "hello world",
-                        attachments
-                );
+        UUID messageId = messageService.createMessage(userId, request, attachments).getId();
 
-        // when
-        UUID messageId = messageService.createMessage(userId, request);
-
-        // then
         Message message = messageRepository.findById(messageId).orElseThrow();
         User user = userRepository.findById(userId).orElseThrow();
         Channel channel = channelRepository.findById(channelId).orElseThrow();
 
         assertThat(message.getContent()).isEqualTo("hello world");
-        assertThat(message.getSenderId()).isEqualTo(userId);
+        assertThat(message.getAuthorId()).isEqualTo(userId);
         assertThat(message.getChannelId()).isEqualTo(channelId);
 
         assertThat(user.getMessageIds()).contains(messageId);
@@ -100,12 +88,10 @@ public class BasicMessageServiceTest {
             assertThat(message.getAttachmentIds()).hasSize(1);
 
             UUID attachmentId = message.getAttachmentIds().get(0);
-            BinaryContent binaryContent =
-                    binaryContentRepository.findById(attachmentId).orElseThrow();
+            BinaryContent binaryContent = binaryContentRepository.findById(attachmentId).orElseThrow();
 
             assertThat(binaryContent.getOwnerId()).isEqualTo(userId);
-            assertThat(binaryContent.getBinaryContentOwnerType())
-                    .isEqualTo(BinaryContentOwnerType.MESSAGE);
+            assertThat(binaryContent.getBinaryContentOwnerType()).isEqualTo(BinaryContentOwnerType.MESSAGE);
         }
     }
 
@@ -116,107 +102,64 @@ public class BasicMessageServiceTest {
                 Arguments.of(List.of(
                         new BinaryContentRequest(
                                 BinaryContentOwnerType.MESSAGE,
-                                new MockMultipartFile(
-                                        "file",
-                                        "image.png",
-                                        "image/png",
-                                        "image".getBytes()
-                                )
+                                new MockMultipartFile("file", "image.png", "image/png", "image".getBytes())
                         )
                 ))
         );
     }
 
-
     @Test
     @DisplayName("채널별 메시지 조회")
     void findMessagesByChannel() {
-
-        // given
-        UUID messageId = messageService.createMessage(
+        messageService.createMessage(
                 userId,
-                new CreateMessageRequest(
-                        channelId,
-                        "hello",
-                        List.of()
-                )
+                new MessageCreateRequest("hello", channelId, userId),
+                List.of()
         );
 
-        // when
-        var responses =
-                messageService.findAllMessagesByChannelId(channelId);
+        var responses = messageService.findAllMessagesByChannelId(channelId);
 
-        // then
         assertThat(responses).hasSize(1);
-        assertThat(responses.get(0).content()).isEqualTo("hello");
+        assertThat(responses.get(0).getContent()).isEqualTo("hello");
     }
 
     @Test
     @DisplayName("메시지 수정 성공")
     void updateMessage_success() {
-
-        // given
         UUID messageId = messageService.createMessage(
                 userId,
-                new CreateMessageRequest(
-                        channelId,
-                        "old",
-                        List.of()
-                )
-        );
+                new MessageCreateRequest("old", channelId, userId),
+                List.of()
+        ).getId();
 
-        UpdateMessageRequest request =
-                new UpdateMessageRequest(
-                        messageId,
-                        "new content",
-                        List.of()
-                );
+        MessageUpdateRequest request = new MessageUpdateRequest("new content");
 
-        // when
-        var response =
-                messageService.updateMessage(userId, request);
+        Message response = messageService.updateMessage(messageId, request);
 
-        // then
-        Message message =
-                messageRepository.findById(messageId).orElseThrow();
-
+        Message message = messageRepository.findById(messageId).orElseThrow();
         assertThat(message.getContent()).isEqualTo("new content");
-        assertThat(response.content()).isEqualTo("new content");
+        assertThat(response.getContent()).isEqualTo("new content");
     }
 
     @Test
     @DisplayName("메시지 삭제 성공")
     void deleteMessage_success() {
-
-        // given
         UUID messageId = messageService.createMessage(
                 userId,
-                new CreateMessageRequest(
-                        channelId,
-                        "delete me",
-                        List.of(
-                                new BinaryContentRequest(
-                                        BinaryContentOwnerType.MESSAGE,
-                                        new MockMultipartFile(
-                                                "file",
-                                                "img.png",
-                                                "image/png",
-                                                "img".getBytes()
-                                        )
-                                )
+                new MessageCreateRequest("delete me", channelId, userId),
+                List.of(
+                        new BinaryContentRequest(
+                                BinaryContentOwnerType.MESSAGE,
+                                new MockMultipartFile("file", "img.png", "image/png", "img".getBytes())
                         )
                 )
-        );
+        ).getId();
 
-        Message message =
-                messageRepository.findById(messageId).orElseThrow();
-
+        Message message = messageRepository.findById(messageId).orElseThrow();
         List<UUID> attachmentIds = message.getAttachmentIds();
 
-        // when
-        messageService.deleteMessage(userId, messageId);
+        messageService.deleteMessage(messageId);
 
-        // then
         assertThat(messageRepository.findById(messageId)).isEmpty();
 
         User user = userRepository.findById(userId).orElseThrow();

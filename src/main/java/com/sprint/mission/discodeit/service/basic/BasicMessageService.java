@@ -1,9 +1,8 @@
 package com.sprint.mission.discodeit.service.basic;
 
 import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentRequest;
-import com.sprint.mission.discodeit.dto.message.CreateMessageRequest;
-import com.sprint.mission.discodeit.dto.message.MessageResponse;
-import com.sprint.mission.discodeit.dto.message.UpdateMessageRequest;
+import com.sprint.mission.discodeit.dto.message.MessageCreateRequest;
+import com.sprint.mission.discodeit.dto.message.MessageUpdateRequest;
 import com.sprint.mission.discodeit.entity.Channel;
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.entity.User;
@@ -30,13 +29,14 @@ public class BasicMessageService implements MessageService {
     private final BinaryContentService binaryContentService;
 
     @Override
-    public UUID createMessage(UUID requesterId, CreateMessageRequest request) {
+    public Message createMessage(UUID requesterId, MessageCreateRequest request,
+                                 List<BinaryContentRequest> attachments) {
         User user = getUserOrThrow(requesterId);
         Channel channel = getChannelOrThrow(request.channelId());
 
         Message message = new Message(requesterId, channel.getId(), request.content());
 
-        List<UUID> attachmentsIds = saveAttachments(request.attachments(), user.getId());
+        List<UUID> attachmentsIds = saveAttachments(attachments, user.getId());
         message.updateAttachments(attachmentsIds);
         messageRepository.save(message);
 
@@ -46,7 +46,7 @@ public class BasicMessageService implements MessageService {
         channel.addMessage(message.getId());
         channelRepository.save(channel);
 
-        return message.getId();
+        return message;
     }
 
     private List<UUID> saveAttachments(List<BinaryContentRequest> binaryContentRequests, UUID userId) {
@@ -65,32 +65,24 @@ public class BasicMessageService implements MessageService {
     }
 
     @Override
-    public List<MessageResponse> findAllMessagesByChannelId(UUID channelId) {
-        List<Message> messages = messageRepository.findAllByChannelId(channelId);
-
-        return messages.stream().map(message -> MessageResponse.from(message)).toList();
+    public List<Message> findAllMessagesByChannelId(UUID channelId) {
+        return messageRepository.findAllByChannelId(channelId);
     }
 
     @Override
-    public MessageResponse updateMessage(UUID requesterId, UpdateMessageRequest request) {
-        Message message = getMessageOrThrow(request.messageId());
+    public Message updateMessage(UUID messageId, MessageUpdateRequest request) {
+        Message message = getMessageOrThrow(messageId);
 
-        message.validateSender(requesterId);
-
-        message.updateContent(request.content());
-
-        List<UUID> attachments = saveAttachments(request.attachments(), requesterId);
-        message.updateAttachments(attachments);
+        message.updateContent(request.newContent());
 
         messageRepository.save(message);
 
-        return MessageResponse.from(message);
+        return message;
     }
 
     @Override
-    public void deleteMessage(UUID requestId, UUID messageId) {
+    public void deleteMessage(UUID messageId) {
         Message message = getMessageOrThrow(messageId);
-        message.validateSender(requestId);
 
         removeMessageFromUser(message);
         removeMessageFromChannel(message);
@@ -105,7 +97,7 @@ public class BasicMessageService implements MessageService {
     }
 
     private void removeMessageFromUser(Message message) {
-        User user = getUserOrThrow(message.getSenderId());
+        User user = getUserOrThrow(message.getAuthorId());
         user.removeMessage(message.getId());
         userRepository.save(user);
     }

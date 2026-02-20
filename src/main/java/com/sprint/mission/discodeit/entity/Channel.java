@@ -1,26 +1,31 @@
 package com.sprint.mission.discodeit.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.Getter;
 
 import java.util.*;
 
 @Getter
+@JsonPropertyOrder({"id", "createdAt", "updatedAt", "type", "name", "description"})
 public class Channel extends BaseEntity {
     private String name;
     private String description;
-    private ChannelType channelType;
+    private ChannelType type;
+    @JsonIgnore
     private Set<UUID> memberIds;
+    @JsonIgnore
     private List<UUID> messageIds;
 
     public Channel(
             String name,
             String description,
-            ChannelType channelType,
+            ChannelType type,
             Set<UUID> memberIds
     ) {
         this.name = name;
         this.description = description;
-        this.channelType = channelType;
+        this.type = type;
         this.memberIds = new HashSet<>(memberIds);
 
         messageIds = new ArrayList<>();
@@ -49,12 +54,14 @@ public class Channel extends BaseEntity {
         );
     }
 
+    @JsonIgnore
     public boolean isPublic() {
-        return channelType.isPublic();
+        return type.isPublic();
     }
 
+    @JsonIgnore
     public boolean isPrivate() {
-        return channelType.isPrivate();
+        return type.isPrivate();
     }
 
     public boolean hasMember(UUID memberId) {

@@ -1,7 +1,6 @@
 package com.sprint.mission.discodeit.service.basic;
 
 import com.sprint.mission.discodeit.dto.auth.LoginRequest;
-import com.sprint.mission.discodeit.dto.user.UserResponse;
 import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.entity.UserStatus;
 import com.sprint.mission.discodeit.repository.UserRepository;
@@ -21,7 +20,7 @@ public class BasicAuthService implements AuthService {
     private final UserStatusRepository userStatusRepository;
 
     @Override
-    public UserResponse login(LoginRequest request) {
+    public User login(LoginRequest request) {
         validateUsername(request);
         User user = getUserOrThrow(request);
 
@@ -31,7 +30,7 @@ public class BasicAuthService implements AuthService {
         userStatus.markActive();
         userStatusRepository.save(userStatus);
 
-        return UserResponse.of(user, userStatus.getOnlineStatus());
+        return user;
     }
 
     private void validateUsername(LoginRequest request) {
@@ -42,10 +41,9 @@ public class BasicAuthService implements AuthService {
     }
 
     private User getUserOrThrow(LoginRequest request) {
-        User user = userRepository.findByUsername(request.username())
+        return userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND,
                         "사용자를 찾을 수 없습니다 username: " + request.username()));
-        return user;
     }
 
     private void validatePassword(LoginRequest request, User user) {
@@ -56,9 +54,8 @@ public class BasicAuthService implements AuthService {
     }
 
     private UserStatus getUserStatusOrThrow(UUID userId) {
-        UserStatus userStatus = userStatusRepository.findByUserId(userId)
+        return userStatusRepository.findByUserId(userId)
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_STATUS_NOT_FOUND,
                         "UserStatus 찾을 수 없습니다 userId: " + userId));
-        return userStatus;
     }
 }

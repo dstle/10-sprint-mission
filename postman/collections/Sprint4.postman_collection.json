@@ -18,31 +18,14 @@
               "mode": "formdata",
               "formdata": [
                 {
-                  "key": "username",
-                  "value": "dustle",
+                  "key": "userCreateRequest",
+                  "value": "{\n  \"username\": \"dustle\",\n  \"password\": \"1234\",\n  \"email\": \"dustle@email.com\"\n}",
                   "type": "text",
+                  "contentType": "application/json",
                   "uuid": "95857329-6477-47db-a4e5-026b1361810a"
                 },
                 {
-                  "key": "password",
-                  "value": "1234",
-                  "type": "text",
-                  "uuid": "9e321757-768e-412a-9a05-e7365e7b903c"
-                },
-                {
-                  "key": "email",
-                  "value": "dustle@email.com",
-                  "type": "text",
-                  "uuid": "1129f516-8374-43c2-b64f-9dadd7eaa9a6"
-                },
-                {
-                  "key": "profileImage.type ",
-                  "value": "USER",
-                  "type": "text",
-                  "uuid": "b0f93c1e-b961-4356-8681-94c0c19c5d6b"
-                },
-                {
-                  "key": "profileImage.file",
+                  "key": "profile",
                   "type": "file",
                   "uuid": "b42db389-4a9c-473f-91e9-408387e9a67c",
                   "src": [
@@ -57,11 +40,12 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/users",
+              "raw": "{{base_url}}/api/users",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "users"
               ]
             }
@@ -75,11 +59,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/users/{{userId}}",
+              "raw": "{{base_url}}/api/users/{{userId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "users",
                 "{{userId}}"
               ]
@@ -94,11 +79,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/users",
+              "raw": "{{base_url}}/api/users",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "users"
               ]
             }
@@ -109,11 +95,23 @@
           "name": "유저 수정",
           "id": "ca482eb2-d38d-4c34-9486-45a40d40e274",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [],
             "body": {
-              "mode": "raw",
-              "raw": "\n{\n  \"username\": \"user1-upd\",\n  \"password\": \"5678\",\n  \"email\": \"user1-upd@test.com\",\n  \"profileImage\": null\n}",
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "userUpdateRequest",
+                  "value": "{\n  \"newUsername\": \"user1-upd\",\n  \"newPassword\": \"5678\",\n  \"newEmail\": \"user1-upd@test.com\"\n}",
+                  "type": "text",
+                  "contentType": "application/json"
+                },
+                {
+                  "key": "profile",
+                  "type": "file",
+                  "src": []
+                }
+              ],
               "options": {
                 "raw": {
                   "language": "json"
@@ -121,11 +119,12 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/users/{{userId}}",
+              "raw": "{{base_url}}/api/users/{{userId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "users",
                 "{{userId}}"
               ],
@@ -147,11 +146,12 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/users/{{userId}}",
+              "raw": "{{base_url}}/api/users/{{userId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "users",
                 "{{userId}}"
               ]
@@ -163,17 +163,18 @@
           "name": "유저 status 변경",
           "id": "0c0e10a9-65cc-44b9-ac54-1fff263c1457",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/users/{{userId}}/status",
+              "raw": "{{base_url}}/api/users/{{userId}}/userStatus",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "users",
                 "{{userId}}",
-                "status"
+                "userStatus"
               ]
             }
           },
@@ -201,11 +202,12 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/auth/login",
+              "raw": "{{base_url}}/api/auth/login",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "auth",
                 "login"
               ]
@@ -235,11 +237,12 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/channels/public",
+              "raw": "{{base_url}}/api/channels/public",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "channels",
                 "public"
               ]
@@ -255,7 +258,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"memberIds\": [\n    \"6f7e8ac7-6b84-4b29-8fc5-1b66b3bfdd11\",\n    \"28ea0814-09b2-4cb5-833a-8c886dc487cb\"\n  ]\n}",
+              "raw": "{\n  \"participantIds\": [\n    \"6f7e8ac7-6b84-4b29-8fc5-1b66b3bfdd11\",\n    \"28ea0814-09b2-4cb5-833a-8c886dc487cb\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -263,11 +266,12 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/channels/private",
+              "raw": "{{base_url}}/api/channels/private",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "channels",
                 "private"
               ]
@@ -282,11 +286,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/channels/{{channelId}}",
+              "raw": "{{base_url}}/api/channels/{{channelId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "channels",
                 "{{channelId}}"
               ]
@@ -301,11 +306,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/channels?userId={{userId}}",
+              "raw": "{{base_url}}/api/channels?userId={{userId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "channels"
               ],
               "query": [
@@ -322,11 +328,11 @@
           "name": "채널 수정",
           "id": "be0d4b39-a17e-4460-8350-6f0a6756ac82",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"channelId\": \"6e4be7c3-e196-447e-8b95-558e365fc01d\",\n  \"name\": \"공지-수정\",\n  \"description\": \"설명-수정\"\n}",
+              "raw": "{\n  \"newName\": \"공지-수정\",\n  \"newDescription\": \"설명-수정\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -334,12 +340,14 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/channels",
+              "raw": "{{base_url}}/api/channels/{{channelId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "channels"
+                "api",
+                "channels",
+                "{{channelId}}"
               ]
             }
           },
@@ -352,11 +360,12 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/channels/{{channelId}}",
+              "raw": "{{base_url}}/api/channels/{{channelId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "channels",
                 "{{channelId}}"
               ]
@@ -377,8 +386,20 @@
             "method": "POST",
             "header": [],
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"channelId\": \"{{channelId}}\",\n  \"content\": \"hello world\",\n  \"attachments\": null\n}",
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "messageCreateRequest",
+                  "value": "{\n  \"channelId\": \"{{channelId}}\",\n  \"content\": \"hello world\",\n  \"authorId\": \"{{userId}}\"\n}",
+                  "type": "text",
+                  "contentType": "application/json"
+                },
+                {
+                  "key": "attachments",
+                  "type": "file",
+                  "src": []
+                }
+              ],
               "options": {
                 "raw": {
                   "language": "json"
@@ -386,19 +407,13 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/messages?userId={{userId}}",
+              "raw": "{{base_url}}/api/messages",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "messages"
-              ],
-              "query": [
-                {
-                  "key": "userId",
-                  "value": "{{userId}}",
-                  "uuid": "7750a0af-d1ce-475f-92de-b79f3622a876"
-                }
               ]
             }
           },
@@ -411,11 +426,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/messages?channelId={{channelId}}",
+              "raw": "{{base_url}}/api/messages?channelId={{channelId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "messages"
               ],
               "query": [
@@ -432,11 +448,11 @@
           "name": "메세지 수정",
           "id": "e44d1e8b-8be0-44fa-8952-bd657974dccb",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"messageId\": \"{{messageId}}\",\n  \"content\": \"updated content\",\n  \"attachments\": []\n}",
+              "raw": "{\n  \"newContent\": \"updated content\",\n  \"authorId\": \"{{userId}}\",\n  \"attachments\": []\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -444,18 +460,14 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/messages?userId={{userId}}",
+              "raw": "{{base_url}}/api/messages/{{messageId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "messages"
-              ],
-              "query": [
-                {
-                  "key": "userId",
-                  "value": "{{userId}}"
-                }
+                "api",
+                "messages",
+                "{{messageId}}"
               ]
             }
           },
@@ -468,19 +480,14 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/messages/{{messageId}}?userId={{userId}}",
+              "raw": "{{base_url}}/api/messages/{{messageId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
                 "messages",
                 "{{messageId}}"
-              ],
-              "query": [
-                {
-                  "key": "userId",
-                  "value": "{{userId}}"
-                }
               ]
             }
           },
@@ -500,7 +507,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"channelId\": \"{{channelId}}\"\n}",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"channelId\": \"{{channelId}}\",\n  \"lastReadAt\": \"2026-02-20T12:00:00Z\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -508,12 +515,13 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/read-statuses",
+              "raw": "{{base_url}}/api/readStatuses",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "read-statuses"
+                "api",
+                "readStatuses"
               ]
             }
           },
@@ -527,7 +535,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id\": \"{{readStatusId}}\"\n}",
+              "raw": "{\n  \"newLastReadAt\": \"2026-02-20T12:05:00Z\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -535,19 +543,21 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/read-statuses",
+              "raw": "{{base_url}}/api/readStatuses/{{readStatusId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "read-statuses"
+                "api",
+                "readStatuses",
+                "{{readStatusId}}"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "단건 조회",
+          "name": "유저 기준 조회",
           "id": "8cc09030-0fbf-492d-bf14-c5e85b0990d1",
           "protocolProfileBehavior": {
             "disableBodyPruning": true
@@ -560,14 +570,19 @@
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"channelId\": \"{{channelId}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/read-statuses/users/{{userId}}",
+              "raw": "{{base_url}}/api/readStatuses?userId={{userId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "read-statuses",
-                "users",
-                "{{userId}}"
+                "api",
+                "readStatuses"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
               ]
             }
           },
@@ -610,12 +625,13 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/binary-contents?ownerId={{userId}}",
+              "raw": "{{base_url}}/api/binaryContents?ownerId={{userId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "binary-contents"
+                "api",
+                "binaryContents"
               ],
               "query": [
                 {
@@ -635,20 +651,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/binary-contents?binaryContentId={{binaryContentId}}",
+              "raw": "{{base_url}}/api/binaryContents/{{binaryContentId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "binary-contents"
-              ],
-              "query": [
-                {
-                  "key": "binaryContentId",
-                  "value": "{{binaryContentId}}",
-                  "type": "text",
-                  "uuid": "f8cdda10-d752-4bbe-80cf-b75e45268828"
-                }
+                "api",
+                "binaryContents",
+                "{{binaryContentId}}"
               ]
             }
           },
@@ -661,21 +671,21 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/binary-contents/{{binaryContentId}}?ids={{binaryContentId}}&ids={{binaryContentId2}}",
+              "raw": "{{base_url}}/api/binaryContents?binaryContentIds={{binaryContentId}}&binaryContentIds={{binaryContentId2}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "binary-contents",
-                "{{binaryContentId}}"
+                "api",
+                "binaryContents"
               ],
               "query": [
                 {
-                  "key": "ids",
+                  "key": "binaryContentIds",
                   "value": "{{binaryContentId}}"
                 },
                 {
-                  "key": "ids",
+                  "key": "binaryContentIds",
                   "value": "{{binaryContentId2}}"
                 }
               ]
@@ -690,12 +700,13 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/binary-contents/{{binaryContentId}}",
+              "raw": "{{base_url}}/api/binaryContents/{{binaryContentId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "binary-contents",
+                "api",
+                "binaryContents",
                 "{{binaryContentId}}"
               ]
             }

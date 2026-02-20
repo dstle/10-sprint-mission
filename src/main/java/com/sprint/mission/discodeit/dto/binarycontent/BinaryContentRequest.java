@@ -7,4 +7,7 @@ public record BinaryContentRequest (
         BinaryContentOwnerType type,
         MultipartFile file
 ) {
+    public static BinaryContentRequest of(BinaryContentOwnerType type, MultipartFile file) {
+        return new BinaryContentRequest(type, file);
+    }
 }

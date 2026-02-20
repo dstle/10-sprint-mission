@@ -1,15 +1,19 @@
 package com.sprint.mission.discodeit.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.Getter;
 
 import java.util.*;
 
 @Getter
+@JsonPropertyOrder({"id", "createdAt", "updatedAt", "username", "email", "password", "profileId"})
 public class User extends BaseEntity {
     private String username;
     private String password;
     private String email;
     private UUID profileId;
+    @JsonIgnore
     private List<UUID> messageIds;
 
     public User(

@@ -1,7 +1,7 @@
 package com.sprint.mission.discodeit.service.basic;
 
 import com.sprint.mission.discodeit.dto.userstatus.CreateUserStatusRequest;
-import com.sprint.mission.discodeit.dto.userstatus.UserStatusResponse;
+import com.sprint.mission.discodeit.dto.userstatus.UserStatusUpdateRequest;
 import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.entity.UserStatus;
 import com.sprint.mission.discodeit.repository.UserRepository;
@@ -55,29 +55,23 @@ public class BasicUserStatusService implements UserStatusService {
     }
 
     @Override
-    public UserStatusResponse findUserStatusByUserStatusId(UUID userStatusId) {
-        UserStatus userStatus = getUserStatusOrThrow(userStatusId);
-
-        return UserStatusResponse.of(userStatus, userStatus.getOnlineStatus());
+    public UserStatus findUserStatusByUserStatusId(UUID userStatusId) {
+        return getUserStatusOrThrow(userStatusId);
     }
 
     @Override
-    public List<UserStatusResponse> findAllUserStatus() {
-        List<UserStatus> userStatuses = userStatusRepository.findAll();
-
-        return userStatuses.stream().map(userStatus ->
-                UserStatusResponse.of(userStatus, userStatus.getOnlineStatus())
-        ).toList();
+    public List<UserStatus> findAllUserStatus() {
+        return userStatusRepository.findAll();
     }
 
     @Override
-    public UserStatusResponse updateUserStatusByUserId(UUID userId) {
+    public UserStatus updateUserStatusByUserId(UUID userId, UserStatusUpdateRequest request) {
         UserStatus userStatus = getUserStatusByUserIdOrThrow(userId);
 
-        userStatus.markActive();
+        userStatus.updateLastActiveAt(request.newLastActiveAt());
         userStatusRepository.save(userStatus);
 
-        return UserStatusResponse.of(userStatus, userStatus.getOnlineStatus());
+        return userStatus;
     }
 
     private UserStatus getUserStatusByUserIdOrThrow(UUID userId) {

@@ -1,9 +1,9 @@
 package com.sprint.mission.discodeit.service.basic;
 
-import com.sprint.mission.discodeit.dto.channel.ChannelResponse;
-import com.sprint.mission.discodeit.dto.channel.CreatePrivateChannelRequest;
-import com.sprint.mission.discodeit.dto.channel.CreatePublicChannelRequest;
-import com.sprint.mission.discodeit.dto.channel.UpdateChannelRequest;
+import com.sprint.mission.discodeit.dto.channel.ChannelDto;
+import com.sprint.mission.discodeit.dto.channel.PrivateChannelCreateRequest;
+import com.sprint.mission.discodeit.dto.channel.PublicChannelCreateRequest;
+import com.sprint.mission.discodeit.dto.channel.PublicChannelUpdateRequest;
 import com.sprint.mission.discodeit.entity.Channel;
 import com.sprint.mission.discodeit.entity.ReadStatus;
 import com.sprint.mission.discodeit.repository.ChannelRepository;
@@ -31,35 +31,36 @@ public class BasicChannelService implements ChannelService {
     private final ReadStatusRepository readStatusRepository;
 
     @Override
-    public UUID createPublicChannel(CreatePublicChannelRequest request) {
+    public Channel createPublicChannel(PublicChannelCreateRequest request) {
         Channel channel = Channel.buildPublic(
                 request.name(),
                 request.description()
         );
 
         channelRepository.save(channel);
-        return channel.getId();
+        return channel;
     }
 
     @Override
-    public UUID createPrivateChannel(CreatePrivateChannelRequest request) {
+    public Channel createPrivateChannel(PrivateChannelCreateRequest request) {
         Channel channel = Channel.buildPrivate(
-                request.memberIds()
+                request.participantIds()
         );
 
-        for (UUID memberId : request.memberIds()) {
+        for (UUID memberId : request.participantIds()) {
             validateMemberExists(memberId);
 
             ReadStatus readStatus = new ReadStatus(
                     memberId,
-                    channel.getId()
+                    channel.getId(),
+                    null
             );
 
             readStatusRepository.save(readStatus);
         }
 
         channelRepository.save(channel);
-        return channel.getId();
+        return channel;
     }
 
     private void validateMemberExists(UUID memberId) {
@@ -70,12 +71,8 @@ public class BasicChannelService implements ChannelService {
     }
 
     @Override
-    public ChannelResponse findChannelByChannelId(UUID channelId) {
-        Channel channel = getChannelOrThrow(channelId);
-
-        Instant lastMessageAt = messageRepository.findLastMessageAtByChannelId(channel.getId());
-
-        return ChannelResponse.of(channel, lastMessageAt);
+    public Channel findChannelByChannelId(UUID channelId) {
+        return getChannelOrThrow(channelId);
     }
 
     private Channel getChannelOrThrow(UUID id) {
@@ -85,7 +82,7 @@ public class BasicChannelService implements ChannelService {
     }
 
     @Override
-    public List<ChannelResponse> findAllChannelsByUserId(UUID requesterId) {
+    public List<ChannelDto> findAllChannelsByUserId(UUID requesterId) {
         List<Channel> channels = channelRepository.findVisibleChannels(requesterId);
 
         List<UUID> channelIds = channels.stream()
@@ -99,25 +96,23 @@ public class BasicChannelService implements ChannelService {
                 .map(channel -> {
                     Instant lastMessageAt = lastMessageMap.get(channel.getId());
 
-                    return ChannelResponse.of(channel, lastMessageAt);
+                    return ChannelDto.of(channel, lastMessageAt);
                 })
                 .toList();
     }
 
     @Override
-    public ChannelResponse updateChannelInfo(UpdateChannelRequest request) {
-        Channel channel = getChannelOrThrow(request.channelId());
+    public Channel updateChannelInfo(UUID channelId, PublicChannelUpdateRequest request) {
+        Channel channel = getChannelOrThrow(channelId);
         validateChannelType(channel);
 
         channel.updateInfo(
-                request.name(),
-                request.description()
+                request.newName(),
+                request.newDescription()
         );
 
         channelRepository.save(channel);
-
-        Instant lastMessageAt = messageRepository.findLastMessageAtByChannelId(channel.getId());
-        return ChannelResponse.of(channel, lastMessageAt);
+        return channel;
     }
 
     private void validateChannelType(Channel channel) {
