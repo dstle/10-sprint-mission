@@ -48,37 +48,37 @@ public class RepositoryConfig {
 
     @Bean
     @ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
-    public UserRepository userRepositoryFile() {
-        return new FileUserRepository();
+    public UserRepository userRepositoryFile(FileLockProvider fileLockProvider) {
+        return new FileUserRepository(fileLockProvider);
     }
 
     @Bean
     @ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
-    public BinaryContentRepository binaryContentRepositoryFile() {
-        return new FileBinaryContentRepository();
+    public BinaryContentRepository binaryContentRepositoryFile(FileLockProvider fileLockProvider) {
+        return new FileBinaryContentRepository(fileLockProvider);
     }
 
     @Bean
     @ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
-    public ReadStatusRepository readStatusRepositoryFile() {
-        return new FileReadStatusRepository();
+    public ReadStatusRepository readStatusRepositoryFile(FileLockProvider fileLockProvider) {
+        return new FileReadStatusRepository(fileLockProvider);
     }
 
     @Bean
     @ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
-    public UserStatusRepository userStatusRepositoryFile() {
-        return new FileUserStatusRepository();
+    public UserStatusRepository userStatusRepositoryFile(FileLockProvider fileLockProvider) {
+        return new FileUserStatusRepository(fileLockProvider);
     }
 
     @Bean
     @ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
-    public MessageRepository messageRepositoryFile() {
-        return new FileMessageRepository();
+    public MessageRepository messageRepositoryFile(FileLockProvider fileLockProvider) {
+        return new FileMessageRepository(fileLockProvider);
     }
 
     @Bean
     @ConditionalOnProperty(name = "discodeit.repository.type", havingValue = "file")
-    public ChannelRepository channelRepositoryFile() {
-        return new FileChannelRepository();
+    public ChannelRepository channelRepositoryFile(FileLockProvider fileLockProvider) {
+        return new FileChannelRepository(fileLockProvider);
     }
 }

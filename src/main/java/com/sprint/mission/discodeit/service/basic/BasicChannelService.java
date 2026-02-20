@@ -25,6 +25,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class BasicChannelService implements ChannelService {
+
     private final UserRepository userRepository;
     private final ChannelRepository channelRepository;
     private final MessageRepository messageRepository;
@@ -47,28 +48,28 @@ public class BasicChannelService implements ChannelService {
                 request.participantIds()
         );
 
-        for (UUID memberId : request.participantIds()) {
-            validateMemberExists(memberId);
-
-            ReadStatus readStatus = new ReadStatus(
-                    memberId,
-                    channel.getId(),
-                    null
-            );
-
-            readStatusRepository.save(readStatus);
-        }
+//        for (UUID memberId : request.participantIds()) {
+//            validateMemberExists(memberId);
+//
+//            ReadStatus readStatus = new ReadStatus(
+//                    memberId,
+//                    channel.getId(),
+//                    null
+//            );
+//
+//            readStatusRepository.save(readStatus);
+//        }
 
         channelRepository.save(channel);
         return channel;
     }
 
-    private void validateMemberExists(UUID memberId) {
-        if (!userRepository.existsById(memberId)) {
-            throw new ApiException(ErrorCode.USER_NOT_FOUND,
-                    "존재하지 않는 memberId 입니다. memberId: " + memberId);
-        }
-    }
+//    private void validateMemberExists(UUID memberId) {
+//        if (!userRepository.existsById(memberId)) {
+//            throw new ApiException(ErrorCode.USER_NOT_FOUND,
+//                    "존재하지 않는 memberId 입니다. memberId: " + memberId);
+//        }
+//    }
 
     @Override
     public Channel findChannelByChannelId(UUID channelId) {

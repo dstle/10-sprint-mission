@@ -10,59 +10,66 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 public class FileMessageRepository implements MessageRepository {
 
     private static final Path MESSAGE_DIRECTORY =
             FileIOHelper.resolveDirectory("messages");
+    private final FileLockProvider fileLockProvider;
+
+    public FileMessageRepository(FileLockProvider fileLockProvider) {
+        this.fileLockProvider = fileLockProvider;
+    }
 
     @Override
     public void save(Message message) {
         Path messageFilePath = MESSAGE_DIRECTORY.resolve(message.getId().toString());
 
-        FileIOHelper.save(messageFilePath, message);
+        withLock(messageFilePath, () -> FileIOHelper.save(messageFilePath, message));
     }
 
     @Override
     public Optional<Message> findById(UUID id) {
         Path messageFilePath = MESSAGE_DIRECTORY.resolve(id.toString());
 
-        return FileIOHelper.load(messageFilePath);
+        return withLock(messageFilePath, () -> FileIOHelper.load(messageFilePath));
     }
 
     @Override
     public List<Message> findAll() {
-        return FileIOHelper.loadAll(MESSAGE_DIRECTORY);
+        return withLock(MESSAGE_DIRECTORY, () -> FileIOHelper.loadAll(MESSAGE_DIRECTORY));
     }
 
     @Override
     public void delete(Message message) {
         Path channelFilePath = MESSAGE_DIRECTORY.resolve(message.getId().toString());
 
-        FileIOHelper.delete(channelFilePath);
+        withLock(channelFilePath, () -> FileIOHelper.delete(channelFilePath));
     }
 
     @Override
     public List<Message> findAllByChannelId(UUID channelId) {
-        return FileIOHelper.<Message>loadAll(MESSAGE_DIRECTORY).stream()
+        return withLock(MESSAGE_DIRECTORY, () -> FileIOHelper.<Message>loadAll(MESSAGE_DIRECTORY).stream()
                 .filter(message -> message.getChannelId().equals(channelId))
-                .toList();
+                .toList());
     }
 
     @Override
     public Instant findLastMessageAtByChannelId(UUID channelId) {
-        return FileIOHelper.<Message>loadAll(MESSAGE_DIRECTORY).stream()
+        return withLock(MESSAGE_DIRECTORY, () -> FileIOHelper.<Message>loadAll(MESSAGE_DIRECTORY).stream()
                 .filter(message ->
                         message.getChannelId().equals(channelId)
                 )
                 .map(Message::getCreatedAt)
                 .max(Instant::compareTo)
-                .orElse(null);
+                .orElse(null));
     }
 
     @Override
     public Map<UUID, Instant> findLastMessageAtByChannelIds(List<UUID> channelIds) {
-        return FileIOHelper.<Message>loadAll(MESSAGE_DIRECTORY).stream()
+        return withLock(MESSAGE_DIRECTORY, () -> FileIOHelper.<Message>loadAll(MESSAGE_DIRECTORY).stream()
                 .filter(message -> channelIds.contains(message.getChannelId()))
                 .collect(
                         java.util.stream.Collectors.toMap(
@@ -70,12 +77,32 @@ public class FileMessageRepository implements MessageRepository {
                                 Message::getCreatedAt,
                                 (t1, t2) -> t1.isAfter(t2) ? t1 : t2
                         )
-                );
+                ));
     }
 
     @Override
     public void deleteById(UUID messageId) {
         Path messagePath = MESSAGE_DIRECTORY.resolve(messageId.toString());
-        FileIOHelper.delete(messagePath);
+        withLock(messagePath, () -> FileIOHelper.delete(messagePath));
+    }
+
+    private void withLock(Path path, Runnable action) {
+        ReentrantLock lock = fileLockProvider.getLock(path);
+        lock.lock();
+        try {
+            action.run();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private <T> T withLock(Path path, Supplier<T> action) {
+        ReentrantLock lock = fileLockProvider.getLock(path);
+        lock.lock();
+        try {
+            return action.get();
+        } finally {
+            lock.unlock();
+        }
     }
 }
