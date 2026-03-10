@@ -13,9 +13,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -105,6 +109,67 @@ public class BasicBinaryContentServiceTest {
 
         assertThat(result).hasSize(2);
         assertThat(result).extracting(BinaryContentDto::id).containsExactlyInAnyOrder(id1, id2);
+    }
+
+    @Test
+    @DisplayName("여러 BinaryContent 생성 성공")
+    void createBinaryContents_success() {
+        List<BinaryContent> result = binaryContentService.createBinaryContents(List.of(
+                new BinaryContentRequest(
+                        BinaryContentOwnerType.USER,
+                        new MockMultipartFile("file", "a.png", "image/png", "a".getBytes())
+                ),
+                new BinaryContentRequest(
+                        BinaryContentOwnerType.USER,
+                        new MockMultipartFile("file", "empty.png", "image/png", new byte[0])
+                ),
+                new BinaryContentRequest(
+                        BinaryContentOwnerType.USER,
+                        new MockMultipartFile("file", "b.png", "image/png", "b".getBytes())
+                )
+        ));
+
+        assertThat(result).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("BinaryContent 엔티티 조회 성공")
+    void findBinaryContentEntity_success() {
+        UUID id = binaryContentService.createBinaryContent(
+                new BinaryContentRequest(
+                        BinaryContentOwnerType.USER,
+                        new MockMultipartFile("file", "entity.png", "image/png", "entity".getBytes())
+                )
+        );
+
+        BinaryContent entity = binaryContentService.findBinaryContentEntity(id);
+
+        assertThat(entity.getId()).isEqualTo(id);
+        assertThat(entity.getFileName()).isEqualTo("entity.png");
+    }
+
+    @Test
+    @DisplayName("BinaryContent 다운로드 성공")
+    void downloadBinaryContent_success() throws Exception {
+        byte[] bytes = "download".getBytes();
+        UUID id = binaryContentService.createBinaryContent(
+                new BinaryContentRequest(
+                        BinaryContentOwnerType.USER,
+                        new MockMultipartFile("file", "download.png", "image/png", bytes)
+                )
+        );
+
+        ResponseEntity<?> response = binaryContentService.downloadBinaryContent(id);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_TYPE)).isEqualTo("image/png");
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION)).contains("download.png");
+
+        Resource body = (Resource) response.getBody();
+        assertThat(body).isNotNull();
+        try (InputStream inputStream = body.getInputStream()) {
+            assertThat(inputStream.readAllBytes()).isEqualTo(bytes);
+        }
     }
 
     @Test

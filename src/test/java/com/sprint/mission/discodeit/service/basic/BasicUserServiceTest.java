@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
@@ -205,6 +206,18 @@ public class BasicUserServiceTest {
                 .isInstanceOf(ApiException.class);
 
         assertThat(userRepository.findById(userId1)).isPresent();
+    }
+
+    @Test
+    @DisplayName("User 삭제 성공")
+    void testDeleteUser_success() {
+        UUID userId = basicUserService.createUser(
+                new UserCreateRequest("deleteUser", "delete@test.com", "1234"),
+                null
+        ).id();
+
+        assertThatCode(() -> basicUserService.deleteUser(userId))
+                .doesNotThrowAnyException();
     }
 
     private void flushAndClear() {

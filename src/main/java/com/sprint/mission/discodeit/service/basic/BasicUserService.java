@@ -84,11 +84,14 @@ public class BasicUserService implements UserService {
     }
 
     @Override
+    @Transactional
     public void deleteUser(UUID requestId) {
         User user = getUserOrThrow(requestId);
+        UUID profileId = user.getProfile() == null ? null : user.getProfile().getId();
 
-        if (user.getProfile() != null) {
-            binaryContentService.deleteBinaryContent(user.getProfile().getId());
+        if (profileId != null) {
+            user.updateProfile(null);
+            binaryContentService.deleteBinaryContent(profileId);
         }
 
         userRepository.delete(user);

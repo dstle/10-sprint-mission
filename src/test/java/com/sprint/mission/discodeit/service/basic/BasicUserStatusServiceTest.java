@@ -156,6 +156,19 @@ public class BasicUserStatusServiceTest {
         assertThat(userStatusRepository.findById(id)).isEmpty();
     }
 
+    @Test
+    @DisplayName("User 엔티티로 UserStatus 생성 성공")
+    void createUserStatus_withUserEntity_success() {
+        User user = new User("entity-create-user", "password", "entity-create@test.com");
+        userRepository.save(user);
+
+        UUID userStatusId = userStatusService.createUserStatus(user);
+        flushAndClear();
+
+        UserStatus userStatus = userStatusRepository.findById(userStatusId).orElseThrow();
+        assertThat(userStatus.getUser().getId()).isEqualTo(user.getId());
+    }
+
     private void flushAndClear() {
         entityManager.flush();
         entityManager.clear();

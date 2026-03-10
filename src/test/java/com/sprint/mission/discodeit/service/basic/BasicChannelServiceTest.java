@@ -140,6 +140,39 @@ public class BasicChannelServiceTest {
     }
 
     @Test
+    @DisplayName("채널 단건 조회 성공")
+    void findChannelByChannelId_success() {
+        UUID channelId = channelService.createPublicChannel(
+                new PublicChannelCreateRequest("단건조회", "desc")
+        ).id();
+
+        ChannelDto response = channelService.findChannelByChannelId(channelId);
+
+        assertThat(response.id()).isEqualTo(channelId);
+        assertThat(response.name()).isEqualTo("단건조회");
+    }
+
+    @Test
+    @DisplayName("PUBLIC 채널 정보 수정 성공")
+    void updatePublicChannel_success() {
+        UUID channelId = channelService.createPublicChannel(
+                new PublicChannelCreateRequest("before", "before-desc")
+        ).id();
+
+        ChannelDto response = channelService.updateChannelInfo(
+                channelId,
+                new PublicChannelUpdateRequest("after", "after-desc")
+        );
+        flushAndClear();
+
+        Channel channel = channelRepository.findById(channelId).orElseThrow();
+        assertThat(response.name()).isEqualTo("after");
+        assertThat(response.description()).isEqualTo("after-desc");
+        assertThat(channel.getName()).isEqualTo("after");
+        assertThat(channel.getDescription()).isEqualTo("after-desc");
+    }
+
+    @Test
     @DisplayName("채널 마지막 메시지 시간 채널의 최신 메시지 기준으로 반환")
     void findChannel_lastMessageAt_success() {
         UUID channelId = channelService.createPublicChannel(

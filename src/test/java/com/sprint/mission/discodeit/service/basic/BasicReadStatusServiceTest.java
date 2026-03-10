@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -167,6 +168,32 @@ public class BasicReadStatusServiceTest {
         flushAndClear();
 
         assertThat(readStatusRepository.findById(readStatus.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("채널 참여자 초기 ReadStatus 생성 성공")
+    void createInitialReadStatuses_success() {
+        User user1 = new User("init-user1", "1234", "init1@test.com");
+        User user2 = new User("init-user2", "1234", "init2@test.com");
+        userRepository.save(user1);
+        userRepository.save(user2);
+
+        Channel channel = Channel.buildPrivate();
+        channelRepository.save(channel);
+
+        Instant lastReadAt = Instant.now();
+        readStatusService.createInitialReadStatuses(
+                channel.getId(),
+                Set.of(user1.getId(), user2.getId()),
+                lastReadAt
+        );
+        flushAndClear();
+
+        List<ReadStatus> readStatuses = readStatusRepository.findAllByChannelId(channel.getId());
+        assertThat(readStatuses).hasSize(2);
+        assertThat(readStatuses)
+                .extracting(rs -> rs.getUser().getId())
+                .containsExactlyInAnyOrder(user1.getId(), user2.getId());
     }
 
     private void flushAndClear() {
