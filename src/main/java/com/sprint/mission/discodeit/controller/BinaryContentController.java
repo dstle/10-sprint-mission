@@ -36,8 +36,6 @@ public class BinaryContentController {
     @Operation(summary = "첨부 파일 생성")
     @ApiResponse(responseCode = "200", description = "첨부 파일 생성 성공")
     public ResponseEntity<UUID> createBinaryContent(
-            @Parameter(description = "파일 소유자 ID", example = "d2d837b7-acb8-4e6c-87ad-0f5841aa96b9")
-            @RequestParam UUID ownerId,
             @Parameter(description = "파일 소유 타입", example = "USER")
             @RequestParam BinaryContentOwnerType type,
             @RequestPart("file") MultipartFile file

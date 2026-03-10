@@ -13,7 +13,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Discodeit API 문서")
-                        .version("1.2")
+                        .version("v1.2")
                         .description("Discodeit 프로젝트의 Swagger API 문서입니다."));
     }
 }

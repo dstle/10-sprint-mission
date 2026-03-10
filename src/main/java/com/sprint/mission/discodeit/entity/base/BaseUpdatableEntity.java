@@ -14,11 +14,6 @@ public abstract class BaseUpdatableEntity extends BaseEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    protected BaseUpdatableEntity() {
-        super();
-        this.updatedAt = getCreatedAt();
-    }
-
     protected final void markUpdated() {
         this.updatedAt = Instant.now();
     }

@@ -7,8 +7,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -35,7 +35,7 @@ public class Message extends BaseUpdatableEntity {
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
-    @ManyToMany
+    @OneToMany
     @JoinTable(
             name = "message_attachments",
             joinColumns = @JoinColumn(name = "message_id"),
