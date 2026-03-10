@@ -1,34 +1,49 @@
 package com.sprint.mission.discodeit.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.sprint.mission.discodeit.entity.base.BaseUpdatableEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
-
-import java.util.*;
+import lombok.NoArgsConstructor;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Getter
-@JsonPropertyOrder({"id", "createdAt", "updatedAt", "type", "name", "description"})
-public class Channel extends BaseEntity {
+@Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "channels")
+public class Channel extends BaseUpdatableEntity {
+
+    @Column(name = "name", length = 100)
     private String name;
+
+    @Column(name = "description", length = 500)
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 10)
     private ChannelType type;
-    @JsonIgnore
-    private Set<UUID> memberIds;
-    @JsonIgnore
-    private List<UUID> messageIds;
+
+    @OneToMany(mappedBy = "channel", orphanRemoval = true)
+    private List<Message> messages = new ArrayList<>();
+
+    @OneToMany(mappedBy = "channel", orphanRemoval = true)
+    private List<ReadStatus> readStatuses = new ArrayList<>();
 
     public Channel(
             String name,
             String description,
-            ChannelType type,
-            Set<UUID> memberIds
+            ChannelType type
     ) {
         this.name = name;
         this.description = description;
         this.type = type;
-        this.memberIds = new HashSet<>(memberIds);
-
-        messageIds = new ArrayList<>();
     }
 
     public static Channel buildPublic(
@@ -38,34 +53,24 @@ public class Channel extends BaseEntity {
         return new Channel(
                 name,
                 description,
-                ChannelType.PUBLIC,
-                new HashSet<>()
+                ChannelType.PUBLIC
         );
     }
 
-    public static Channel buildPrivate(
-            Set<UUID> memberIds
-    ) {
+    public static Channel buildPrivate() {
         return new Channel(
                 null,
                 null,
-                ChannelType.PRIVATE,
-                new HashSet<>(memberIds)
+                ChannelType.PRIVATE
         );
     }
 
-    @JsonIgnore
     public boolean isPublic() {
         return type.isPublic();
     }
 
-    @JsonIgnore
     public boolean isPrivate() {
         return type.isPrivate();
-    }
-
-    public boolean hasMember(UUID memberId) {
-        return memberIds.contains(memberId);
     }
 
     public void updateInfo(String name, String description) {
@@ -74,16 +79,6 @@ public class Channel extends BaseEntity {
         Optional.ofNullable(description)
                 .ifPresent(value -> this.description = value);
 
-        markUpdated();
-    }
-
-    public void addMessage(UUID messageId) {
-        messageIds.add(messageId);
-        markUpdated();
-    }
-
-    public void removeMessage(UUID messageId) {
-        messageIds.remove(messageId);
         markUpdated();
     }
 }

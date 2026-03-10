@@ -1,16 +1,19 @@
 package com.sprint.mission.discodeit.service.basic;
 
+import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentDto;
 import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentRequest;
 import com.sprint.mission.discodeit.entity.BinaryContent;
 import com.sprint.mission.discodeit.entity.BinaryContentOwnerType;
 import com.sprint.mission.discodeit.repository.BinaryContentRepository;
 import com.sprint.mission.discodeit.response.ApiException;
-import com.sprint.mission.discodeit.utils.FileIOHelper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.List;
@@ -21,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
+@Transactional
 public class BasicBinaryContentServiceTest {
 
     @Autowired
@@ -29,12 +33,11 @@ public class BasicBinaryContentServiceTest {
     @Autowired
     BinaryContentRepository binaryContentRepository;
 
-    UUID ownerId;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @BeforeEach
     void setUp() {
-        FileIOHelper.flushData();
-        ownerId = UUID.randomUUID();
     }
 
     @Test
@@ -42,15 +45,15 @@ public class BasicBinaryContentServiceTest {
     void createBinaryContent_success() {
         BinaryContentRequest request = new BinaryContentRequest(
                 BinaryContentOwnerType.USER,
-                new MockMultipartFile("file", "bytes-data.png", "image/png", "bytes-data".getBytes())
+                new MockMultipartFile("file", "bytes-data.png", "image/png",
+                        "bytes-data".getBytes())
         );
 
-        UUID binaryContentId = binaryContentService.createBinaryContent(ownerId, request);
+        UUID binaryContentId = binaryContentService.createBinaryContent(request);
+        flushAndClear();
 
         Optional<BinaryContent> saved = binaryContentRepository.findById(binaryContentId);
         assertThat(saved).isPresent();
-        assertThat(saved.get().getOwnerId()).isEqualTo(ownerId);
-        assertThat(saved.get().getBinaryContentOwnerType()).isEqualTo(BinaryContentOwnerType.USER);
     }
 
     @Test
@@ -63,13 +66,15 @@ public class BasicBinaryContentServiceTest {
                 new MockMultipartFile("file", "hello.png", "image/png", image)
         );
 
-        UUID id = binaryContentService.createBinaryContent(ownerId, request);
+        UUID id = binaryContentService.createBinaryContent(request);
+        flushAndClear();
 
-        BinaryContent response = binaryContentService.findBinaryContent(id);
+        BinaryContentDto response = binaryContentService.findBinaryContent(id);
 
-        assertThat(response.getId()).isEqualTo(id);
-        assertThat(response.getBytes()).isEqualTo(image);
-        assertThat(response.getOwnerId()).isEqualTo(ownerId);
+        assertThat(response.id()).isEqualTo(id);
+        assertThat(response.fileName()).isEqualTo("hello.png");
+        assertThat(response.size()).isEqualTo((long) image.length);
+        assertThat(response.contentType()).isEqualTo("image/png");
     }
 
     @Test
@@ -83,7 +88,6 @@ public class BasicBinaryContentServiceTest {
     @DisplayName("여러 BinaryContent 조회 성공")
     void findAllByIdIn_success() {
         UUID id1 = binaryContentService.createBinaryContent(
-                ownerId,
                 new BinaryContentRequest(
                         BinaryContentOwnerType.USER,
                         new MockMultipartFile("file", "a.png", "image/png", "a".getBytes())
@@ -91,32 +95,37 @@ public class BasicBinaryContentServiceTest {
         );
 
         UUID id2 = binaryContentService.createBinaryContent(
-                ownerId,
                 new BinaryContentRequest(
                         BinaryContentOwnerType.USER,
                         new MockMultipartFile("file", "b.png", "image/png", "b".getBytes())
                 )
         );
 
-        List<BinaryContent> result = binaryContentService.findAllByIdIn(List.of(id1, id2));
+        List<BinaryContentDto> result = binaryContentService.findAllByIdIn(List.of(id1, id2));
 
         assertThat(result).hasSize(2);
-        assertThat(result).extracting(BinaryContent::getId).containsExactlyInAnyOrder(id1, id2);
+        assertThat(result).extracting(BinaryContentDto::id).containsExactlyInAnyOrder(id1, id2);
     }
 
     @Test
     @DisplayName("BinaryContent 삭제 성공")
     void deleteBinaryContent_success() {
         UUID id = binaryContentService.createBinaryContent(
-                ownerId,
                 new BinaryContentRequest(
                         BinaryContentOwnerType.USER,
-                        new MockMultipartFile("file", "delete.png", "image/png", "delete".getBytes())
+                        new MockMultipartFile("file", "delete.png", "image/png",
+                                "delete".getBytes())
                 )
         );
 
         binaryContentService.deleteBinaryContent(id);
+        flushAndClear();
 
         assertThat(binaryContentRepository.findById(id)).isEmpty();
+    }
+
+    private void flushAndClear() {
+        entityManager.flush();
+        entityManager.clear();
     }
 }

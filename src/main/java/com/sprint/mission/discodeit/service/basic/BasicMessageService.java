@@ -2,116 +2,98 @@ package com.sprint.mission.discodeit.service.basic;
 
 import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentRequest;
 import com.sprint.mission.discodeit.dto.message.MessageCreateRequest;
+import com.sprint.mission.discodeit.dto.message.MessageDto;
 import com.sprint.mission.discodeit.dto.message.MessageUpdateRequest;
+import com.sprint.mission.discodeit.dto.response.PageResponse;
+import com.sprint.mission.discodeit.entity.BinaryContent;
 import com.sprint.mission.discodeit.entity.Channel;
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.entity.User;
+import com.sprint.mission.discodeit.mapper.MessageMapper;
+import com.sprint.mission.discodeit.mapper.PageResponseMapper;
 import com.sprint.mission.discodeit.repository.ChannelRepository;
 import com.sprint.mission.discodeit.repository.MessageRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
+import com.sprint.mission.discodeit.response.ApiException;
+import com.sprint.mission.discodeit.response.ErrorCode;
 import com.sprint.mission.discodeit.service.BinaryContentService;
 import com.sprint.mission.discodeit.service.MessageService;
-import com.sprint.mission.discodeit.response.ErrorCode;
-import com.sprint.mission.discodeit.response.ApiException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class BasicMessageService implements MessageService {
+
+    private static final int DEFAULT_MESSAGE_PAGE_SIZE = 50;
+
     private final UserRepository userRepository;
     private final ChannelRepository channelRepository;
     private final MessageRepository messageRepository;
     private final BinaryContentService binaryContentService;
+    private final MessageMapper messageMapper;
+    private final PageResponseMapper pageResponseMapper;
 
     @Override
-    public Message createMessage(UUID requesterId, MessageCreateRequest request,
-                                 List<BinaryContentRequest> attachments) {
+    @Transactional
+    public MessageDto createMessage(
+            UUID requesterId,
+            MessageCreateRequest request,
+            List<BinaryContentRequest> attachments
+    ) {
         User user = getUserOrThrow(requesterId);
         Channel channel = getChannelOrThrow(request.channelId());
 
-        Message message = new Message(requesterId, channel.getId(), request.content());
+        Message message = new Message(user, channel, request.content());
 
-        List<UUID> attachmentsIds = saveAttachments(attachments, user.getId());
-        message.updateAttachments(attachmentsIds);
+        List<BinaryContent> attachmentEntities = binaryContentService.createBinaryContents(
+                attachments
+        );
+        message.updateAttachments(attachmentEntities);
         messageRepository.save(message);
 
-        user.addMessage(message.getId());
-        userRepository.save(user);
-
-        channel.addMessage(message.getId());
-        channelRepository.save(channel);
-
-        return message;
-    }
-
-    private List<UUID> saveAttachments(List<BinaryContentRequest> binaryContentRequests, UUID userId) {
-        if (binaryContentRequests == null) {
-            return List.of();
-        }
-
-        List<UUID> attachmentsIds = new ArrayList<>();
-
-        for (BinaryContentRequest binaryContentRequest : new ArrayList<>(binaryContentRequests)) {
-            UUID binaryContentId = binaryContentService.createBinaryContent(userId, binaryContentRequest);
-            attachmentsIds.add(binaryContentId);
-        }
-
-        return attachmentsIds;
+        return messageMapper.toDto(message);
     }
 
     @Override
-    public List<Message> findAllMessagesByChannelId(UUID channelId) {
-        return messageRepository.findAllByChannelId(channelId);
+    @Transactional(readOnly = true)
+    public PageResponse<MessageDto> findAllMessagesByChannelId(
+            UUID channelId,
+            Instant cursor,
+            Pageable pageable
+    ) {
+        Pageable cursorPageable = buildCursorPageable(pageable);
+        Slice<MessageDto> messageSlice = getMessageSlice(channelId, cursor, cursorPageable)
+                .map(messageMapper::toDto);
+        Object nextCursor = getNextCursor(messageSlice);
+
+        return pageResponseMapper.fromSlice(messageSlice, nextCursor);
     }
 
     @Override
-    public Message updateMessage(UUID messageId, MessageUpdateRequest request) {
+    @Transactional
+    public MessageDto updateMessage(UUID messageId, MessageUpdateRequest request) {
         Message message = getMessageOrThrow(messageId);
-
         message.updateContent(request.newContent());
 
-        messageRepository.save(message);
-
-        return message;
+        return messageMapper.toDto(message);
     }
 
     @Override
+    @Transactional
     public void deleteMessage(UUID messageId) {
         Message message = getMessageOrThrow(messageId);
-
-        removeMessageFromUser(message);
-        removeMessageFromChannel(message);
-
-        List<UUID> attachmentIds = message.getAttachmentIds();
-
-        for (UUID attachmentId : attachmentIds) {
-            binaryContentService.deleteBinaryContent(attachmentId);
-        }
+        message.getAttachments().clear();
 
         messageRepository.delete(message);
-    }
-
-    private void removeMessageFromUser(Message message) {
-        User user = getUserOrThrow(message.getAuthorId());
-        user.removeMessage(message.getId());
-        userRepository.save(user);
-    }
-
-    private void removeMessageFromChannel(Message message) {
-        Channel channel = getChannelOrThrow(message.getChannelId());
-        channel.removeMessage(message.getId());
-        channelRepository.save(channel);
-    }
-
-    private Message getMessageOrThrow(UUID messageId) {
-        return messageRepository.findById(messageId)
-                .orElseThrow(() -> new ApiException(ErrorCode.MESSAGE_NOT_FOUND,
-                        "메세지를 찾을 수 없습니다 messageId: " + messageId));
     }
 
     private User getUserOrThrow(UUID userId) {
@@ -124,5 +106,43 @@ public class BasicMessageService implements MessageService {
         return channelRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.CHANNEL_NOT_FOUND,
                         "채널을 찾을 수 없습니다 channelId: " + id));
+    }
+
+    private Message getMessageOrThrow(UUID messageId) {
+        return messageRepository.findById(messageId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MESSAGE_NOT_FOUND,
+                        "메세지를 찾을 수 없습니다 messageId: " + messageId));
+    }
+
+    private Slice<Message> getMessageSlice(UUID channelId, Instant cursor, Pageable pageable) {
+        if (cursor == null) {
+            return messageRepository.findByChannel_IdOrderByCreatedAtDesc(channelId, pageable);
+        }
+        return messageRepository.findByChannel_IdAndCreatedAtLessThanOrderByCreatedAtDesc(
+                channelId,
+                cursor,
+                pageable
+        );
+    }
+
+    private Object getNextCursor(Slice<MessageDto> messageSlice) {
+        if (!messageSlice.hasNext() || messageSlice.getContent().isEmpty()) {
+            return null;
+        }
+
+        MessageDto lastMessage = messageSlice.getContent().get(messageSlice.getContent().size() - 1);
+        return lastMessage.createdAt();
+    }
+
+    private Pageable buildCursorPageable(Pageable pageable) {
+        int size = pageable == null || pageable.getPageSize() <= 0
+                ? DEFAULT_MESSAGE_PAGE_SIZE
+                : pageable.getPageSize();
+
+        return PageRequest.of(
+                0,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
     }
 }

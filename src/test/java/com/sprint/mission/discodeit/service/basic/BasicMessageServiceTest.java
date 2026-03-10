@@ -2,7 +2,9 @@ package com.sprint.mission.discodeit.service.basic;
 
 import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentRequest;
 import com.sprint.mission.discodeit.dto.message.MessageCreateRequest;
+import com.sprint.mission.discodeit.dto.message.MessageDto;
 import com.sprint.mission.discodeit.dto.message.MessageUpdateRequest;
+import com.sprint.mission.discodeit.dto.response.PageResponse;
 import com.sprint.mission.discodeit.entity.BinaryContent;
 import com.sprint.mission.discodeit.entity.BinaryContentOwnerType;
 import com.sprint.mission.discodeit.entity.Channel;
@@ -12,7 +14,8 @@ import com.sprint.mission.discodeit.repository.BinaryContentRepository;
 import com.sprint.mission.discodeit.repository.ChannelRepository;
 import com.sprint.mission.discodeit.repository.MessageRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
-import com.sprint.mission.discodeit.utils.FileIOHelper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,8 +24,11 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -30,6 +36,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@Transactional
 public class BasicMessageServiceTest {
 
     @Autowired
@@ -47,12 +54,14 @@ public class BasicMessageServiceTest {
     @Autowired
     BinaryContentRepository binaryContentRepository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     UUID userId;
     UUID channelId;
 
     @BeforeEach
     void setUp() {
-        FileIOHelper.flushData();
 
         User user = new User("testUser", "1234", "test@test.com");
         userRepository.save(user);
@@ -61,6 +70,8 @@ public class BasicMessageServiceTest {
         Channel channel = Channel.buildPublic("test-channel", "test-desc");
         channelRepository.save(channel);
         channelId = channel.getId();
+
+        flushAndClear();
     }
 
     @ParameterizedTest
@@ -69,29 +80,25 @@ public class BasicMessageServiceTest {
     void createMessage_success(List<BinaryContentRequest> attachments) {
         MessageCreateRequest request = new MessageCreateRequest("hello world", channelId, userId);
 
-        UUID messageId = messageService.createMessage(userId, request, attachments).getId();
+        UUID messageId = messageService.createMessage(userId, request, attachments).id();
+        flushAndClear();
 
         Message message = messageRepository.findById(messageId).orElseThrow();
-        User user = userRepository.findById(userId).orElseThrow();
-        Channel channel = channelRepository.findById(channelId).orElseThrow();
 
         assertThat(message.getContent()).isEqualTo("hello world");
-        assertThat(message.getAuthorId()).isEqualTo(userId);
-        assertThat(message.getChannelId()).isEqualTo(channelId);
-
-        assertThat(user.getMessageIds()).contains(messageId);
-        assertThat(channel.getMessageIds()).contains(messageId);
+        assertThat(message.getAuthor().getId()).isEqualTo(userId);
+        assertThat(message.getChannel().getId()).isEqualTo(channelId);
 
         if (attachments == null || attachments.isEmpty()) {
-            assertThat(message.getAttachmentIds()).isEmpty();
+            assertThat(message.getAttachments()).isEmpty();
         } else {
-            assertThat(message.getAttachmentIds()).hasSize(1);
+            assertThat(message.getAttachments()).hasSize(1);
 
-            UUID attachmentId = message.getAttachmentIds().get(0);
+            UUID attachmentId = message.getAttachments().get(0).getId();
             BinaryContent binaryContent = binaryContentRepository.findById(attachmentId).orElseThrow();
 
-            assertThat(binaryContent.getOwnerId()).isEqualTo(userId);
-            assertThat(binaryContent.getBinaryContentOwnerType()).isEqualTo(BinaryContentOwnerType.MESSAGE);
+            assertThat(binaryContent.getFileName()).isEqualTo("image.png");
+            assertThat(binaryContent.getContentType()).isEqualTo("image/png");
         }
     }
 
@@ -117,10 +124,14 @@ public class BasicMessageServiceTest {
                 List.of()
         );
 
-        var responses = messageService.findAllMessagesByChannelId(channelId);
+        PageResponse<MessageDto> responses = messageService.findAllMessagesByChannelId(
+                channelId,
+                null,
+                PageRequest.of(0, 50)
+        );
 
-        assertThat(responses).hasSize(1);
-        assertThat(responses.get(0).getContent()).isEqualTo("hello");
+        assertThat(responses.content()).hasSize(1);
+        assertThat(responses.content().get(0).content()).isEqualTo("hello");
     }
 
     @Test
@@ -130,15 +141,16 @@ public class BasicMessageServiceTest {
                 userId,
                 new MessageCreateRequest("old", channelId, userId),
                 List.of()
-        ).getId();
+        ).id();
 
         MessageUpdateRequest request = new MessageUpdateRequest("new content");
 
-        Message response = messageService.updateMessage(messageId, request);
+        MessageDto response = messageService.updateMessage(messageId, request);
+        flushAndClear();
 
         Message message = messageRepository.findById(messageId).orElseThrow();
         assertThat(message.getContent()).isEqualTo("new content");
-        assertThat(response.getContent()).isEqualTo("new content");
+        assertThat(response.content()).isEqualTo("new content");
     }
 
     @Test
@@ -153,23 +165,72 @@ public class BasicMessageServiceTest {
                                 new MockMultipartFile("file", "img.png", "image/png", "img".getBytes())
                         )
                 )
-        ).getId();
+        ).id();
 
         Message message = messageRepository.findById(messageId).orElseThrow();
-        List<UUID> attachmentIds = message.getAttachmentIds();
+        List<UUID> attachmentIds = message.getAttachments().stream()
+                .map(BinaryContent::getId)
+                .toList();
 
         messageService.deleteMessage(messageId);
+        flushAndClear();
 
         assertThat(messageRepository.findById(messageId)).isEmpty();
 
-        User user = userRepository.findById(userId).orElseThrow();
-        Channel channel = channelRepository.findById(channelId).orElseThrow();
-
-        assertThat(user.getMessageIds()).doesNotContain(messageId);
-        assertThat(channel.getMessageIds()).doesNotContain(messageId);
-
         for (UUID attachmentId : attachmentIds) {
-            assertThat(binaryContentRepository.findById(attachmentId)).isEmpty();
+            assertThat(binaryContentRepository.findById(attachmentId)).isPresent();
         }
+    }
+
+    @Test
+    @DisplayName("메시지 커서 페이지네이션 조회 성공")
+    void findMessagesByChannel_withCursor() {
+        for (int i = 1; i <= 130; i++) {
+            messageService.createMessage(
+                    userId,
+                    new MessageCreateRequest("m" + i, channelId, userId),
+                    List.of()
+            );
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        PageResponse<MessageDto> firstPage = messageService.findAllMessagesByChannelId(
+                channelId,
+                null,
+                PageRequest.of(0, 50)
+        );
+
+        assertThat(firstPage.content()).hasSize(50);
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(firstPage.nextCursor()).isInstanceOf(Instant.class);
+
+        PageResponse<MessageDto> secondPage = messageService.findAllMessagesByChannelId(
+                channelId,
+                (Instant) firstPage.nextCursor(),
+                PageRequest.of(0, 50)
+        );
+
+        assertThat(secondPage.content()).hasSize(50);
+        assertThat(secondPage.hasNext()).isTrue();
+        assertThat(secondPage.nextCursor()).isInstanceOf(Instant.class);
+
+        PageResponse<MessageDto> thirdPage = messageService.findAllMessagesByChannelId(
+                channelId,
+                (Instant) secondPage.nextCursor(),
+                PageRequest.of(0, 50)
+        );
+
+        assertThat(thirdPage.content()).hasSize(30);
+        assertThat(thirdPage.hasNext()).isFalse();
+        assertThat(thirdPage.nextCursor()).isNull();
+    }
+
+    private void flushAndClear() {
+        entityManager.flush();
+        entityManager.clear();
     }
 }
