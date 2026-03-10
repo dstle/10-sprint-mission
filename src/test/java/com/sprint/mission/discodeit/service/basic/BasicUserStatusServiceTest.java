@@ -169,6 +169,17 @@ public class BasicUserStatusServiceTest {
         assertThat(userStatus.getUser().getId()).isEqualTo(user.getId());
     }
 
+    @Test
+    @DisplayName("UserStatus 생성 시 User 양방향 연관관계 일관성 유지")
+    void userStatus_bidirectionalConsistency() {
+        User user = userRepository.findById(userId).orElseThrow();
+
+        UserStatus userStatus = new UserStatus(user, Instant.now());
+
+        assertThat(userStatus.getUser()).isEqualTo(user);
+        assertThat(user.getStatus()).isEqualTo(userStatus);
+    }
+
     private void flushAndClear() {
         entityManager.flush();
         entityManager.clear();

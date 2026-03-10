@@ -49,6 +49,40 @@ public class BasicReadStatusService implements ReadStatusService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ReadStatusDto findReadStatusByReadStatusId(UUID readStatusId) {
+        return readStatusMapper.toDto(getReadStatusOrThrow(readStatusId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReadStatusDto> findAllReadStatusesByUserId(UUID userId) {
+        User user = getUserOrThrow(userId);
+
+        return readStatusRepository.findAllByUser(user).stream()
+                .map(readStatusMapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public ReadStatusDto updateReadStatus(UUID readStatusId, ReadStatusUpdateRequest request) {
+        ReadStatus readStatus = getReadStatusOrThrow(readStatusId);
+
+        readStatus.updateLastReadAt(request.newLastReadAt());
+        return readStatusMapper.toDto(readStatus);
+    }
+
+    @Override
+    @Transactional
+    public void deleteReadStatus(UUID readStatusId) {
+        ReadStatus readStatus = getReadStatusOrThrow(readStatusId);
+        readStatus.assignUser(null);
+        readStatus.assignChannel(null);
+        readStatusRepository.delete(readStatus);
+    }
+
+    @Override
     @Transactional
     public void createInitialReadStatuses(
             UUID channelId,
@@ -67,38 +101,6 @@ public class BasicReadStatusService implements ReadStatusService {
         }
 
         readStatusRepository.saveAll(readStatuses);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ReadStatusDto findReadStatusByReadStatusId(UUID readStatusId) {
-        return readStatusMapper.toDto(getReadStatusOrThrow(readStatusId));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ReadStatusDto> findAllReadStatusesByUserId(UUID userId) {
-        getUserOrThrow(userId);
-
-        return readStatusRepository.findAllByUserId(userId).stream()
-                .map(readStatusMapper::toDto)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public ReadStatusDto updateReadStatus(UUID readStatusId, ReadStatusUpdateRequest request) {
-        ReadStatus readStatus = getReadStatusOrThrow(readStatusId);
-
-        readStatus.updateLastReadAt(request.newLastReadAt());
-        return readStatusMapper.toDto(readStatus);
-    }
-
-    @Override
-    @Transactional
-    public void deleteReadStatus(UUID readStatusId) {
-        ReadStatus readStatus = getReadStatusOrThrow(readStatusId);
-        readStatusRepository.delete(readStatus);
     }
 
     private User getUserOrThrow(UUID userId) {

@@ -38,9 +38,9 @@ public class ReadStatus extends BaseUpdatableEntity {
     private Instant lastReadAt;
 
     public ReadStatus(User user, Channel channel, Instant lastReadAt) {
-        this.user = user;
-        this.channel = channel;
         this.lastReadAt = lastReadAt;
+        assignUser(user);
+        assignChannel(channel);
     }
 
     public void updateLastReadAt(Instant newLastReadAt) {
@@ -48,5 +48,45 @@ public class ReadStatus extends BaseUpdatableEntity {
             this.lastReadAt = newLastReadAt;
         }
         markUpdated();
+    }
+
+    public void assignUser(User user) {
+        if (this.user == user) {
+            return;
+        }
+
+        User previousUser = this.user;
+        this.user = user;
+
+        if (previousUser != null) {
+            previousUser.removeReadStatus(this);
+        }
+        if (user != null && !user.getReadStatuses().contains(this)) {
+            user.addReadStatus(this);
+        }
+    }
+
+    public void assignChannel(Channel channel) {
+        if (this.channel == channel) {
+            return;
+        }
+
+        Channel previousChannel = this.channel;
+        this.channel = channel;
+
+        if (previousChannel != null) {
+            previousChannel.removeReadStatus(this);
+        }
+        if (channel != null && !channel.getReadStatuses().contains(this)) {
+            channel.addReadStatus(this);
+        }
+    }
+
+    public void clearUser() {
+        this.user = null;
+    }
+
+    public void clearChannel() {
+        this.channel = null;
     }
 }

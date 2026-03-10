@@ -72,6 +72,7 @@ public class BasicChannelServiceTest {
     @Nested
     @DisplayName("PUBLIC 채널")
     class PublicChannelTest {
+
         @Test
         @DisplayName("PUBLIC 채널 생성 성공")
         void createPublicChannel_success() {
@@ -90,16 +91,18 @@ public class BasicChannelServiceTest {
     @Nested
     @DisplayName("PRIVATE 채널")
     class PrivateChannelTest {
+
         @Test
         @DisplayName("PRIVATE 채널 생성 성공")
         void createPrivateChannel_success() {
-            PrivateChannelCreateRequest request = new PrivateChannelCreateRequest(Set.of(userId1, userId2));
+            PrivateChannelCreateRequest request = new PrivateChannelCreateRequest(
+                    Set.of(userId1, userId2));
             UUID channelId = channelService.createPrivateChannel(request).id();
             flushAndClear();
 
             Channel channel = channelRepository.findById(channelId).orElseThrow();
             assertThat(channel.isPrivate()).isTrue();
-            List<ReadStatus> readStatuses = readStatusRepository.findAllByChannelId(channelId);
+            List<ReadStatus> readStatuses = readStatusRepository.findByChannelIn(List.of(channel));
             assertThat(readStatuses).hasSize(2);
             assertThat(readStatuses)
                     .extracting(readStatus -> readStatus.getUser().getId())
@@ -173,35 +176,19 @@ public class BasicChannelServiceTest {
     }
 
     @Test
-    @DisplayName("채널 마지막 메시지 시간 채널의 최신 메시지 기준으로 반환")
-    void findChannel_lastMessageAt_success() {
-        UUID channelId = channelService.createPublicChannel(
-                new PublicChannelCreateRequest("공지", "공지 채널")
-        ).id();
-
+    @DisplayName("채널 조회 시 lastMessageAt 은 최신 메시지 시간으로 반환")
+    void findChannelByChannelId_returnsLatestLastMessageAt() {
+        Channel channel = channelRepository.save(Channel.buildPublic("메시지채널", "desc"));
         User user = userRepository.findById(userId1).orElseThrow();
-        Channel channel = channelRepository.findById(channelId).orElseThrow();
 
-        Message first = new Message(user, channel, "첫번째");
-        messageRepository.save(first);
-
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
-        Message second = new Message(user, channel, "두번째");
-        messageRepository.save(second);
+        messageRepository.save(new Message(user, channel, "first"));
         flushAndClear();
 
-        ChannelDto response = channelService.findAllChannelsByUserId(userId1).stream()
-                .filter(c -> c.id().equals(channelId))
-                .findFirst()
-                .orElseThrow();
+        ChannelDto response = channelService.findChannelByChannelId(channel.getId());
+        Channel savedChannel = channelRepository.findById(channel.getId()).orElseThrow();
 
-        assertThat(response.lastMessageAt())
-                .isEqualTo(messageRepository.findLastMessageAtByChannelId(channelId));
+        assertThat(savedChannel.getLastMessageAt()).isNotNull();
+        assertThat(response.lastMessageAt()).isEqualTo(savedChannel.getLastMessageAt());
     }
 
     @Test
@@ -222,6 +209,28 @@ public class BasicChannelServiceTest {
 
         channelService.deleteChannel(channelId);
         assertThat(channelRepository.existsById(channelId)).isFalse();
+    }
+
+    @Test
+    @DisplayName("채널 삭제 시 메시지와 읽음 상태 양방향 참조도 함께 정리")
+    void deleteChannel_clearsBidirectionalReferences() {
+        User user = userRepository.findById(userId1).orElseThrow();
+        Channel channel = channelRepository.save(Channel.buildPrivate());
+
+        ReadStatus readStatus = readStatusRepository.save(new ReadStatus(user, channel, java.time.Instant.now()));
+        Message message = messageRepository.save(new Message(user, channel, "hello"));
+
+        assertThat(channel.getReadStatuses()).contains(readStatus);
+        assertThat(channel.getMessages()).contains(message);
+        assertThat(user.getReadStatuses()).contains(readStatus);
+        assertThat(user.getMessages()).contains(message);
+
+        channelService.deleteChannel(channel.getId());
+
+        assertThat(channel.getReadStatuses()).isEmpty();
+        assertThat(channel.getMessages()).isEmpty();
+        assertThat(user.getReadStatuses()).doesNotContain(readStatus);
+        assertThat(user.getMessages()).doesNotContain(message);
     }
 
     private void flushAndClear() {

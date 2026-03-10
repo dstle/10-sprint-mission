@@ -60,7 +60,8 @@ public class BasicReadStatusServiceTest {
         channelRepository.save(channel);
 
         Instant lastReadAt = Instant.now();
-        ReadStatusCreateRequest request = new ReadStatusCreateRequest(user.getId(), channel.getId(), lastReadAt);
+        ReadStatusCreateRequest request = new ReadStatusCreateRequest(user.getId(), channel.getId(),
+                lastReadAt);
 
         UUID readStatusId = readStatusService.createReadStatus(request).id();
         flushAndClear();
@@ -189,11 +190,28 @@ public class BasicReadStatusServiceTest {
         );
         flushAndClear();
 
-        List<ReadStatus> readStatuses = readStatusRepository.findAllByChannelId(channel.getId());
+        List<ReadStatus> readStatuses = readStatusRepository.findByChannelIn(List.of(channel));
         assertThat(readStatuses).hasSize(2);
         assertThat(readStatuses)
                 .extracting(rs -> rs.getUser().getId())
                 .containsExactlyInAnyOrder(user1.getId(), user2.getId());
+    }
+
+    @Test
+    @DisplayName("ReadStatus 생성 시 User, Channel 양방향 연관관계 일관성 유지")
+    void readStatus_bidirectionalConsistency() {
+        User user = new User("user-bidir", "1234", "user-bidir@test.com");
+        userRepository.save(user);
+
+        Channel channel = Channel.buildPublic("bidir", "desc");
+        channelRepository.save(channel);
+
+        ReadStatus readStatus = new ReadStatus(user, channel, Instant.now());
+
+        assertThat(readStatus.getUser()).isEqualTo(user);
+        assertThat(readStatus.getChannel()).isEqualTo(channel);
+        assertThat(user.getReadStatuses()).contains(readStatus);
+        assertThat(channel.getReadStatuses()).contains(readStatus);
     }
 
     private void flushAndClear() {

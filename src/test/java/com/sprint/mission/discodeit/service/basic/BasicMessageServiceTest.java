@@ -28,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -183,6 +182,20 @@ public class BasicMessageServiceTest {
     }
 
     @Test
+    @DisplayName("Message 생성 시 User, Channel 양방향 연관관계 일관성 유지")
+    void message_bidirectionalConsistency() {
+        User user = userRepository.findById(userId).orElseThrow();
+        Channel channel = channelRepository.findById(channelId).orElseThrow();
+
+        Message message = new Message(user, channel, "bidirectional");
+
+        assertThat(message.getAuthor()).isEqualTo(user);
+        assertThat(message.getChannel()).isEqualTo(channel);
+        assertThat(user.getMessages()).contains(message);
+        assertThat(channel.getMessages()).contains(message);
+    }
+
+    @Test
     @DisplayName("메시지 커서 페이지네이션 조회 성공")
     void findMessagesByChannel_withCursor() {
         for (int i = 1; i <= 130; i++) {
@@ -206,21 +219,21 @@ public class BasicMessageServiceTest {
 
         assertThat(firstPage.content()).hasSize(50);
         assertThat(firstPage.hasNext()).isTrue();
-        assertThat(firstPage.nextCursor()).isInstanceOf(Instant.class);
+        assertThat(firstPage.nextCursor()).isInstanceOf(UUID.class);
 
         PageResponse<MessageDto> secondPage = messageService.findAllMessagesByChannelId(
                 channelId,
-                (Instant) firstPage.nextCursor(),
+                (UUID) firstPage.nextCursor(),
                 PageRequest.of(0, 50)
         );
 
         assertThat(secondPage.content()).hasSize(50);
         assertThat(secondPage.hasNext()).isTrue();
-        assertThat(secondPage.nextCursor()).isInstanceOf(Instant.class);
+        assertThat(secondPage.nextCursor()).isInstanceOf(UUID.class);
 
         PageResponse<MessageDto> thirdPage = messageService.findAllMessagesByChannelId(
                 channelId,
-                (Instant) secondPage.nextCursor(),
+                (UUID) secondPage.nextCursor(),
                 PageRequest.of(0, 50)
         );
 

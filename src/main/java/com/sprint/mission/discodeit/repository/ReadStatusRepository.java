@@ -1,15 +1,15 @@
 package com.sprint.mission.discodeit.repository;
 
+import com.sprint.mission.discodeit.entity.Channel;
 import com.sprint.mission.discodeit.entity.ReadStatus;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import com.sprint.mission.discodeit.entity.User;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface ReadStatusRepository extends JpaRepository<ReadStatus, UUID> {
-
-    @Query("select rs from ReadStatus rs where rs.channel.id = :channelId")
-    List<ReadStatus> findAllByChannelId(UUID channelId);
 
     @Query("""
             select (count(rs) > 0)
@@ -19,6 +19,9 @@ public interface ReadStatusRepository extends JpaRepository<ReadStatus, UUID> {
             """)
     boolean existsByUserIdAndChannelId(UUID userId, UUID channelId);
 
-    @Query("select rs from ReadStatus rs where rs.user.id = :userId")
-    List<ReadStatus> findAllByUserId(UUID userId);
+    @EntityGraph(attributePaths = {"user", "channel"})
+    List<ReadStatus> findAllByUser(User user);
+
+    @EntityGraph(attributePaths = {"user", "channel"})
+    List<ReadStatus> findByChannelIn(List<Channel> channels);
 }

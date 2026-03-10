@@ -53,6 +53,11 @@ public class User extends BaseUpdatableEntity {
         this.email = email;
     }
 
+    public void updateProfile(BinaryContent profile) {
+        this.profile = profile;
+        markUpdated();
+    }
+
     public void update(
             String username,
             String password,
@@ -71,8 +76,63 @@ public class User extends BaseUpdatableEntity {
         markUpdated();
     }
 
-    public void updateProfile(BinaryContent profile) {
-        this.profile = profile;
-        markUpdated();
+    public void assignStatus(UserStatus status) {
+        if (this.status == status) {
+            return;
+        }
+
+        UserStatus previousStatus = this.status;
+        this.status = status;
+
+        if (previousStatus != null && previousStatus.getUser() == this) {
+            previousStatus.clearUser();
+        }
+        if (status != null && status.getUser() != this) {
+            status.assignUser(this);
+        }
+    }
+
+    public void addMessage(Message message) {
+        if (message == null) {
+            return;
+        }
+        if (!messages.contains(message)) {
+            messages.add(message);
+        }
+        if (message.getAuthor() != this) {
+            message.assignAuthor(this);
+        }
+    }
+
+    public void removeMessage(Message message) {
+        if (message == null) {
+            return;
+        }
+        messages.remove(message);
+        if (message.getAuthor() == this) {
+            message.clearAuthor();
+        }
+    }
+
+    public void addReadStatus(ReadStatus readStatus) {
+        if (readStatus == null) {
+            return;
+        }
+        if (!readStatuses.contains(readStatus)) {
+            readStatuses.add(readStatus);
+        }
+        if (readStatus.getUser() != this) {
+            readStatus.assignUser(this);
+        }
+    }
+
+    public void removeReadStatus(ReadStatus readStatus) {
+        if (readStatus == null) {
+            return;
+        }
+        readStatuses.remove(readStatus);
+        if (readStatus.getUser() == this) {
+            readStatus.clearUser();
+        }
     }
 }

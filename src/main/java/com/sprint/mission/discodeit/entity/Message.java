@@ -1,22 +1,24 @@
 package com.sprint.mission.discodeit.entity;
 
 import com.sprint.mission.discodeit.entity.base.BaseUpdatableEntity;
-import com.sprint.mission.discodeit.response.ErrorCode;
 import com.sprint.mission.discodeit.response.ApiException;
+import com.sprint.mission.discodeit.response.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
@@ -44,20 +46,20 @@ public class Message extends BaseUpdatableEntity {
     private List<BinaryContent> attachments;
 
     public Message(User author, Channel channel, String content) {
-        this.author = author;
-        this.channel = channel;
         this.content = content;
         this.attachments = new ArrayList<>();
-    }
-
-    public void updateAttachments(List<BinaryContent> attachments) {
-        this.attachments = attachments;
-        markUpdated();
+        assignAuthor(author);
+        assignChannel(channel);
     }
 
     public void updateContent(String content) {
         Optional.ofNullable(content)
                 .ifPresent(value -> this.content = value);
+        markUpdated();
+    }
+
+    public void updateAttachments(List<BinaryContent> attachments) {
+        this.attachments = attachments;
         markUpdated();
     }
 
@@ -67,4 +69,52 @@ public class Message extends BaseUpdatableEntity {
                     "메세지의 sender가 아닙니다. userId: " + userId);
         }
     }
+
+    public void assignAuthor(User author) {
+        if (this.author == author) {
+            return;
+        }
+
+        User previousAuthor = this.author;
+        this.author = author;
+
+        if (previousAuthor != null) {
+            previousAuthor.removeMessage(this);
+        }
+        if (author != null && !author.getMessages().contains(this)) {
+            author.addMessage(this);
+        }
+    }
+
+    public void assignChannel(Channel channel) {
+        if (this.channel == channel) {
+            return;
+        }
+
+        Channel previousChannel = this.channel;
+        this.channel = channel;
+
+        if (previousChannel != null) {
+            previousChannel.removeMessage(this);
+        }
+        if (channel != null && !channel.getMessages().contains(this)) {
+            channel.addMessage(this);
+        }
+    }
+
+    public void clearAuthor() {
+        this.author = null;
+    }
+
+    public void clearChannel() {
+        this.channel = null;
+    }
+
+    @PrePersist
+    private void onPrePersist() {
+        if (channel != null) {
+            channel.updateLastMessageAt(getCreatedAt() == null ? Instant.now() : getCreatedAt());
+        }
+    }
+
 }

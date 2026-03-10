@@ -35,6 +35,7 @@ CREATE TABLE channels (
     id UUID PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ,
+    last_message_at TIMESTAMPTZ,
     name VARCHAR(100),
     description VARCHAR(500),
     type VARCHAR(10) NOT NULL,

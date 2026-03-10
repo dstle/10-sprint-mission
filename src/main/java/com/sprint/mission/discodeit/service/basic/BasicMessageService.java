@@ -18,7 +18,6 @@ import com.sprint.mission.discodeit.response.ApiException;
 import com.sprint.mission.discodeit.response.ErrorCode;
 import com.sprint.mission.discodeit.service.BinaryContentService;
 import com.sprint.mission.discodeit.service.MessageService;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -58,16 +57,18 @@ public class BasicMessageService implements MessageService {
                 attachments
         );
         message.updateAttachments(attachmentEntities);
-        messageRepository.save(message);
 
-        return messageMapper.toDto(message);
+        Message savedMessage = messageRepository.save(message);
+        channel.updateLastMessageAt(savedMessage.getCreatedAt());
+
+        return messageMapper.toDto(savedMessage);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<MessageDto> findAllMessagesByChannelId(
             UUID channelId,
-            Instant cursor,
+            UUID cursor,
             Pageable pageable
     ) {
         Pageable cursorPageable = buildCursorPageable(pageable);
@@ -92,6 +93,8 @@ public class BasicMessageService implements MessageService {
     public void deleteMessage(UUID messageId) {
         Message message = getMessageOrThrow(messageId);
         message.getAttachments().clear();
+        message.assignAuthor(null);
+        message.assignChannel(null);
 
         messageRepository.delete(message);
     }
@@ -114,13 +117,20 @@ public class BasicMessageService implements MessageService {
                         "메세지를 찾을 수 없습니다 messageId: " + messageId));
     }
 
-    private Slice<Message> getMessageSlice(UUID channelId, Instant cursor, Pageable pageable) {
+    private Slice<Message> getMessageSlice(UUID channelId, UUID cursor, Pageable pageable) {
         if (cursor == null) {
-            return messageRepository.findByChannel_IdOrderByCreatedAtDesc(channelId, pageable);
+            return messageRepository.findByChannel_IdOrderByCreatedAtDescIdDesc(
+                    channelId,
+                    pageable
+            );
         }
-        return messageRepository.findByChannel_IdAndCreatedAtLessThanOrderByCreatedAtDesc(
+        Message cursorMessage = getMessageOrThrow(cursor);
+        validateCursorChannel(cursorMessage, channelId);
+
+        return messageRepository.findNextPageByChannelIdAndCursor(
                 channelId,
-                cursor,
+                cursorMessage.getCreatedAt(),
+                cursorMessage.getId(),
                 pageable
         );
     }
@@ -130,8 +140,9 @@ public class BasicMessageService implements MessageService {
             return null;
         }
 
-        MessageDto lastMessage = messageSlice.getContent().get(messageSlice.getContent().size() - 1);
-        return lastMessage.createdAt();
+        MessageDto lastMessage = messageSlice.getContent()
+                .get(messageSlice.getContent().size() - 1);
+        return lastMessage.id();
     }
 
     private Pageable buildCursorPageable(Pageable pageable) {
@@ -142,7 +153,20 @@ public class BasicMessageService implements MessageService {
         return PageRequest.of(
                 0,
                 size,
-                Sort.by(Sort.Direction.DESC, "createdAt")
+                Sort.by(
+                        Sort.Order.desc("createdAt"),
+                        Sort.Order.desc("id")
+                )
         );
+    }
+
+    private void validateCursorChannel(Message cursorMessage, UUID channelId) {
+        if (!cursorMessage.getChannel().getId().equals(channelId)) {
+            throw new ApiException(
+                    ErrorCode.MESSAGE_NOT_FOUND,
+                    "커서 메시지가 채널에 속하지 않습니다. messageId: " + cursorMessage.getId()
+                            + ", channelId: " + channelId
+            );
+        }
     }
 }

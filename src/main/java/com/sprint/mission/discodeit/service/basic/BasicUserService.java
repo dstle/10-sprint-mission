@@ -5,13 +5,15 @@ import com.sprint.mission.discodeit.dto.user.UserCreateRequest;
 import com.sprint.mission.discodeit.dto.user.UserDto;
 import com.sprint.mission.discodeit.dto.user.UserUpdateRequest;
 import com.sprint.mission.discodeit.entity.BinaryContent;
+import com.sprint.mission.discodeit.entity.Message;
+import com.sprint.mission.discodeit.entity.ReadStatus;
 import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.mapper.UserMapper;
 import com.sprint.mission.discodeit.repository.UserRepository;
-import com.sprint.mission.discodeit.repository.UserStatusRepository;
 import com.sprint.mission.discodeit.response.ApiException;
 import com.sprint.mission.discodeit.response.ErrorCode;
 import com.sprint.mission.discodeit.service.BinaryContentService;
+import com.sprint.mission.discodeit.service.ReadStatusService;
 import com.sprint.mission.discodeit.service.UserService;
 import com.sprint.mission.discodeit.service.UserStatusService;
 import java.util.List;
@@ -26,6 +28,7 @@ public class BasicUserService implements UserService {
 
     private final UserRepository userRepository;
     private final BinaryContentService binaryContentService;
+    private final ReadStatusService readStatusService;
     private final UserStatusService userStatusService;
     private final UserMapper userMapper;
 
@@ -56,7 +59,7 @@ public class BasicUserService implements UserService {
     @Override
     @Transactional(readOnly = true)
     public List<UserDto> findAllUsers() {
-        return userRepository.findAll().stream()
+        return userRepository.findAllWithStatusAndProfile().stream()
                 .map(userMapper::toDto)
                 .toList();
     }
@@ -89,6 +92,15 @@ public class BasicUserService implements UserService {
         User user = getUserOrThrow(requestId);
         UUID profileId = user.getProfile() == null ? null : user.getProfile().getId();
 
+        for (Message message : List.copyOf(user.getMessages())) {
+            message.assignAuthor(null);
+        }
+        for (ReadStatus readStatus : List.copyOf(user.getReadStatuses())) {
+            readStatusService.deleteReadStatus(readStatus.getId());
+        }
+        if (user.getStatus() != null) {
+            userStatusService.deleteUserStatus(user.getStatus().getId());
+        }
         if (profileId != null) {
             user.updateProfile(null);
             binaryContentService.deleteBinaryContent(profileId);

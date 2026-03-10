@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.sprint.mission.discodeit.dto.response.PageableRequest;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -89,8 +88,8 @@ public class MessageController {
     public ResponseEntity<PageResponse<MessageDto>> findAllMessagesByChannelId(
             @Parameter(description = "조회할 Channel ID", example = "6e4be7c3-e196-447e-8b95-558e365fc01d")
             @RequestParam UUID channelId,
-            @Parameter(description = "페이징 커서 정보", example = "2026-03-10T10:15:30Z")
-            @RequestParam(required = false) Instant cursor,
+            @Parameter(description = "페이징 커서 메시지 ID", example = "9b0712f3-7dbf-4e9f-9f33-63cdb028b07a")
+            @RequestParam(required = false) UUID cursor,
             @Parameter(
                     description = "페이징 정보",
                     required = true,

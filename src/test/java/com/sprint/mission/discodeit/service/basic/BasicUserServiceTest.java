@@ -6,10 +6,16 @@ import com.sprint.mission.discodeit.dto.user.UserDto;
 import com.sprint.mission.discodeit.dto.user.UserUpdateRequest;
 import com.sprint.mission.discodeit.entity.BinaryContent;
 import com.sprint.mission.discodeit.entity.BinaryContentOwnerType;
+import com.sprint.mission.discodeit.entity.Channel;
+import com.sprint.mission.discodeit.entity.Message;
+import com.sprint.mission.discodeit.entity.ReadStatus;
 import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.entity.UserOnlineStatus;
 import com.sprint.mission.discodeit.entity.UserStatus;
 import com.sprint.mission.discodeit.repository.BinaryContentRepository;
+import com.sprint.mission.discodeit.repository.ChannelRepository;
+import com.sprint.mission.discodeit.repository.MessageRepository;
+import com.sprint.mission.discodeit.repository.ReadStatusRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
 import com.sprint.mission.discodeit.repository.UserStatusRepository;
 import com.sprint.mission.discodeit.response.ApiException;
@@ -49,6 +55,15 @@ public class BasicUserServiceTest {
 
     @Autowired
     private BinaryContentRepository binaryContentRepository;
+
+    @Autowired
+    private ChannelRepository channelRepository;
+
+    @Autowired
+    private MessageRepository messageRepository;
+
+    @Autowired
+    private ReadStatusRepository readStatusRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -218,6 +233,30 @@ public class BasicUserServiceTest {
 
         assertThatCode(() -> basicUserService.deleteUser(userId))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("User 삭제 시 메시지 작성자, 읽음 상태, 상태 객체 참조도 함께 정리")
+    void testDeleteUser_clearsBidirectionalReferences() {
+        User user = new User("ref-user", "1234", "ref@test.com");
+        userRepository.save(user);
+        UserStatus userStatus = userStatusRepository.save(new UserStatus(user, java.time.Instant.now()));
+        Channel channel = channelRepository.save(Channel.buildPublic("ref-channel", "desc"));
+        ReadStatus readStatus = readStatusRepository.save(new ReadStatus(user, channel, java.time.Instant.now()));
+        Message message = messageRepository.save(new Message(user, channel, "message"));
+
+        assertThat(user.getStatus()).isEqualTo(userStatus);
+        assertThat(user.getReadStatuses()).contains(readStatus);
+        assertThat(user.getMessages()).contains(message);
+        assertThat(channel.getReadStatuses()).contains(readStatus);
+
+        basicUserService.deleteUser(user.getId());
+
+        assertThat(user.getStatus()).isNull();
+        assertThat(user.getReadStatuses()).doesNotContain(readStatus);
+        assertThat(user.getMessages()).doesNotContain(message);
+        assertThat(message.getAuthor()).isNull();
+        assertThat(channel.getReadStatuses()).doesNotContain(readStatus);
     }
 
     private void flushAndClear() {

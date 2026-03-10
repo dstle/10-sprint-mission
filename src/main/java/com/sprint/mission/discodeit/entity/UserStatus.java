@@ -30,8 +30,21 @@ public class UserStatus extends BaseUpdatableEntity {
             User user,
             Instant lastActiveAt
     ) {
-        this.user = user;
         this.lastActiveAt = lastActiveAt;
+        assignUser(user);
+    }
+
+    public UserOnlineStatus getOnlineStatus() {
+        Instant threshold = Instant.now()
+                .minusSeconds(ONLINE_TIMEOUT_SECONDS);
+
+        return lastActiveAt.isAfter(threshold)
+                ? UserOnlineStatus.ONLINE
+                : UserOnlineStatus.OFFLINE;
+    }
+
+    public boolean isOnline() {
+        return getOnlineStatus() == UserOnlineStatus.ONLINE;
     }
 
     public void markActive() {
@@ -46,16 +59,23 @@ public class UserStatus extends BaseUpdatableEntity {
         }
     }
 
-    public UserOnlineStatus getOnlineStatus() {
-        Instant threshold = Instant.now()
-                .minusSeconds(ONLINE_TIMEOUT_SECONDS);
+    public void assignUser(User user) {
+        if (this.user == user) {
+            return;
+        }
 
-        return lastActiveAt.isAfter(threshold)
-                ? UserOnlineStatus.ONLINE
-                : UserOnlineStatus.OFFLINE;
+        User previousUser = this.user;
+        this.user = user;
+
+        if (previousUser != null && previousUser.getStatus() == this) {
+            previousUser.assignStatus(null);
+        }
+        if (user != null && user.getStatus() != this) {
+            user.assignStatus(this);
+        }
     }
 
-    public boolean isOnline() {
-        return getOnlineStatus() == UserOnlineStatus.ONLINE;
+    public void clearUser() {
+        this.user = null;
     }
 }

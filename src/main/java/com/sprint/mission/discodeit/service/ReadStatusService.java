@@ -12,8 +12,6 @@ public interface ReadStatusService {
 
     ReadStatusDto createReadStatus(ReadStatusCreateRequest request);
 
-    void createInitialReadStatuses(UUID channelId, Set<UUID> participantIds, Instant lastReadAt);
-
     ReadStatusDto findReadStatusByReadStatusId(UUID readStatusId);
 
     List<ReadStatusDto> findAllReadStatusesByUserId(UUID userId);
@@ -21,4 +19,10 @@ public interface ReadStatusService {
     ReadStatusDto updateReadStatus(UUID readStatusId, ReadStatusUpdateRequest request);
 
     void deleteReadStatus(UUID readStatusId);
+
+    void createInitialReadStatuses(
+            UUID channelId,
+            Set<UUID> participantIds,
+            Instant lastReadAt
+    );
 }

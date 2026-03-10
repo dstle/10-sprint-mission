@@ -33,17 +33,6 @@ public class BasicUserStatusService implements UserStatusService {
     }
 
     @Override
-    @Transactional
-    public UUID createUserStatus(User user) {
-        validateDuplicateUserStatus(user.getId());
-
-        UserStatus userStatus = new UserStatus(user, user.getUpdatedAt());
-        userStatusRepository.save(userStatus);
-
-        return userStatus.getId();
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public UserStatusDto findUserStatusByUserStatusId(UUID userStatusId) {
         return userStatusMapper.toDto(getUserStatusOrThrow(userStatusId));
@@ -71,7 +60,19 @@ public class BasicUserStatusService implements UserStatusService {
     @Transactional
     public void deleteUserStatus(UUID userStatusId) {
         UserStatus userStatus = getUserStatusOrThrow(userStatusId);
+        userStatus.assignUser(null);
         userStatusRepository.delete(userStatus);
+    }
+
+    @Override
+    @Transactional
+    public UUID createUserStatus(User user) {
+        validateDuplicateUserStatus(user.getId());
+
+        UserStatus userStatus = new UserStatus(user, user.getUpdatedAt());
+        userStatusRepository.save(userStatus);
+
+        return userStatus.getId();
     }
 
     private User getUserOrThrow(UUID userId) {
