@@ -108,3 +108,4 @@ CREATE INDEX idx_read_statuses_channel_id ON read_statuses (channel_id);
 CREATE INDEX idx_messages_channel_id ON messages (channel_id);
 CREATE INDEX idx_messages_author_id ON messages (author_id);
 CREATE INDEX idx_message_attachments_attachment_id ON message_attachments (attachment_id);
+CREATE INDEX idx_messages_channel_created_id ON messages (channel_id, created_at DESC, id DESC);

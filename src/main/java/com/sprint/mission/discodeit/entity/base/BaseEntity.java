@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.Getter;
+import org.hibernate.Hibernate;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -32,14 +33,15 @@ public abstract class BaseEntity {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof BaseEntity that)) {
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) {
             return false;
         }
-        return Objects.equals(id, that.id);
+        BaseEntity that = (BaseEntity) o;
+        return id != null && id.equals(that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return getClass().hashCode();
     }
 }
