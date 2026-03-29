@@ -7,8 +7,8 @@ import com.sprint.mission.discodeit.entity.UserOnlineStatus;
 import com.sprint.mission.discodeit.entity.UserStatus;
 import com.sprint.mission.discodeit.repository.UserRepository;
 import com.sprint.mission.discodeit.repository.UserStatusRepository;
-import com.sprint.mission.discodeit.response.ApiException;
-import com.sprint.mission.discodeit.response.ErrorCode;
+import com.sprint.mission.discodeit.exception.DiscodeitException;
+import com.sprint.mission.discodeit.exception.ErrorCode;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.Instant;
@@ -57,10 +57,11 @@ public class BasicAuthServiceTest {
     @DisplayName("존재하지 않는 username 로그인 실패")
     void login_fail_userNotFound() {
         assertThatThrownBy(() -> authService.login(new LoginRequest("not-exist", "1234")))
-                .isInstanceOf(ApiException.class)
+                .isInstanceOf(DiscodeitException.class)
                 .satisfies(ex -> {
-                    ApiException apiException = (ApiException) ex;
-                    assertThat(apiException.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+                    DiscodeitException discodeitException = (DiscodeitException) ex;
+                    assertThat(discodeitException.getErrorCode()).isEqualTo(
+                            ErrorCode.USER_NOT_FOUND);
                 });
     }
 
@@ -73,10 +74,11 @@ public class BasicAuthServiceTest {
         flushAndClear();
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("auth-user2", "wrong")))
-                .isInstanceOf(ApiException.class)
+                .isInstanceOf(DiscodeitException.class)
                 .satisfies(ex -> {
-                    ApiException apiException = (ApiException) ex;
-                    assertThat(apiException.getErrorCode()).isEqualTo(ErrorCode.INVALID_PASSWORD);
+                    DiscodeitException discodeitException = (DiscodeitException) ex;
+                    assertThat(discodeitException.getErrorCode()).isEqualTo(
+                            ErrorCode.INVALID_PASSWORD);
                 });
     }
 

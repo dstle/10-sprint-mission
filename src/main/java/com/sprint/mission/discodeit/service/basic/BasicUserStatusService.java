@@ -8,8 +8,8 @@ import com.sprint.mission.discodeit.entity.UserStatus;
 import com.sprint.mission.discodeit.mapper.UserStatusMapper;
 import com.sprint.mission.discodeit.repository.UserRepository;
 import com.sprint.mission.discodeit.repository.UserStatusRepository;
-import com.sprint.mission.discodeit.response.ApiException;
-import com.sprint.mission.discodeit.response.ErrorCode;
+import com.sprint.mission.discodeit.exception.DiscodeitException;
+import com.sprint.mission.discodeit.exception.ErrorCode;
 import com.sprint.mission.discodeit.service.UserStatusService;
 import java.util.List;
 import java.util.UUID;
@@ -77,26 +77,26 @@ public class BasicUserStatusService implements UserStatusService {
 
     private User getUserOrThrow(UUID userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND,
+                .orElseThrow(() -> new DiscodeitException(ErrorCode.USER_NOT_FOUND,
                         "사용자를 찾을 수 없습니다 userId: " + userId));
     }
 
     private void validateDuplicateUserStatus(UUID userId) {
         if (userStatusRepository.existsByUserId(userId)) {
-            throw new ApiException(ErrorCode.USER_STATUS_ALREADY_EXISTS,
+            throw new DiscodeitException(ErrorCode.USER_STATUS_ALREADY_EXISTS,
                     "이미 존재하는 userStatus 입니다 userId: " + userId);
         }
     }
 
     private UserStatus getUserStatusOrThrow(UUID userStatusId) {
         return userStatusRepository.findById(userStatusId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_STATUS_NOT_FOUND,
+                .orElseThrow(() -> new DiscodeitException(ErrorCode.USER_STATUS_NOT_FOUND,
                         "UserStatus 를 찾을 수 없습니다 userStatusId: " + userStatusId));
     }
 
     private UserStatus getUserStatusByUserIdOrThrow(UUID userId) {
         return userStatusRepository.findByUserId(userId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_STATUS_NOT_FOUND,
+                .orElseThrow(() -> new DiscodeitException(ErrorCode.USER_STATUS_NOT_FOUND,
                         "UserStatus 를 찾을 수 없습니다 userId: " + userId));
     }
 }

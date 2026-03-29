@@ -6,8 +6,8 @@ import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.entity.UserStatus;
 import com.sprint.mission.discodeit.mapper.UserMapper;
 import com.sprint.mission.discodeit.repository.UserRepository;
-import com.sprint.mission.discodeit.response.ApiException;
-import com.sprint.mission.discodeit.response.ErrorCode;
+import com.sprint.mission.discodeit.exception.DiscodeitException;
+import com.sprint.mission.discodeit.exception.ErrorCode;
 import com.sprint.mission.discodeit.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,20 +36,20 @@ public class BasicAuthService implements AuthService {
 
     private void validateUsername(LoginRequest request) {
         if (!userRepository.existsByUsername(request.username())) {
-            throw new ApiException(ErrorCode.USER_NOT_FOUND,
+            throw new DiscodeitException(ErrorCode.USER_NOT_FOUND,
                     "존재하지 않은 username 입니다 username: " + request.username());
         }
     }
 
     private User getUserOrThrow(LoginRequest request) {
         return userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND,
+                .orElseThrow(() -> new DiscodeitException(ErrorCode.USER_NOT_FOUND,
                         "사용자를 찾을 수 없습니다 username: " + request.username()));
     }
 
     private void validatePassword(LoginRequest request, User user) {
         if (!user.getPassword().equals(request.password())) {
-            throw new ApiException(ErrorCode.INVALID_PASSWORD,
+            throw new DiscodeitException(ErrorCode.INVALID_PASSWORD,
                     "일치하지않은 비밀번호 입니다. username: " + request.username());
         }
     }

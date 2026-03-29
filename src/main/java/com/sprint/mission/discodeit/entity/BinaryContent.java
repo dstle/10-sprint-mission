@@ -1,11 +1,12 @@
 package com.sprint.mission.discodeit.entity;
 
 import com.sprint.mission.discodeit.entity.base.BaseEntity;
-import com.sprint.mission.discodeit.response.ApiException;
-import com.sprint.mission.discodeit.response.ErrorCode;
+import com.sprint.mission.discodeit.exception.DiscodeitException;
+import com.sprint.mission.discodeit.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -39,9 +40,10 @@ public class BinaryContent extends BaseEntity {
 
     private void validateContentType(String contentType) {
         if (!contentType.startsWith("image/")) {
-            throw new ApiException(
+            throw new DiscodeitException(
                     ErrorCode.INVALID_CONTENT_TYPE,
-                    "이미지만 업로드 가능합니다"
+                    "이미지만 업로드 가능합니다",
+                    Map.of("contentType", contentType)
             );
         }
     }

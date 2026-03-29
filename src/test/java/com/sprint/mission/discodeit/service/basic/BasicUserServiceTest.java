@@ -18,7 +18,7 @@ import com.sprint.mission.discodeit.repository.MessageRepository;
 import com.sprint.mission.discodeit.repository.ReadStatusRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
 import com.sprint.mission.discodeit.repository.UserStatusRepository;
-import com.sprint.mission.discodeit.response.ApiException;
+import com.sprint.mission.discodeit.exception.DiscodeitException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,9 +97,12 @@ public class BasicUserServiceTest {
             assertThat(user.getProfile()).isNull();
         } else {
             assertThat(user.getProfile()).isNotNull();
-            BinaryContent binaryContent = binaryContentRepository.findById(user.getProfile().getId()).orElseThrow();
-            assertThat(binaryContent.getFileName()).isEqualTo(binaryContentRequest.file().getOriginalFilename());
-            assertThat(binaryContent.getContentType()).isEqualTo(binaryContentRequest.file().getContentType());
+            BinaryContent binaryContent = binaryContentRepository.findById(
+                    user.getProfile().getId()).orElseThrow();
+            assertThat(binaryContent.getFileName()).isEqualTo(
+                    binaryContentRequest.file().getOriginalFilename());
+            assertThat(binaryContent.getContentType()).isEqualTo(
+                    binaryContentRequest.file().getContentType());
             assertThat(binaryContent.getSize()).isEqualTo(binaryContentRequest.file().getSize());
         }
     }
@@ -109,7 +112,8 @@ public class BasicUserServiceTest {
                 Arguments.of((BinaryContentRequest) null),
                 Arguments.of(new BinaryContentRequest(
                         BinaryContentOwnerType.USER,
-                        new MockMultipartFile("file", "test.png", "image/png", "test-bytes".getBytes())
+                        new MockMultipartFile("file", "test.png", "image/png",
+                                "test-bytes".getBytes())
                 ))
         );
     }
@@ -118,15 +122,16 @@ public class BasicUserServiceTest {
     @DisplayName("username 또는 email 중복 시 User 생성 실패")
     void testCreateUserDuplicateFail() {
         UserCreateRequest first = new UserCreateRequest("dupUser", "a@test.com", "1234");
-        UserCreateRequest duplicateUsername = new UserCreateRequest("dupUser", "b@test.com", "5678");
+        UserCreateRequest duplicateUsername = new UserCreateRequest("dupUser", "b@test.com",
+                "5678");
         UserCreateRequest duplicateEmail = new UserCreateRequest("other", "a@test.com", "5678");
 
         basicUserService.createUser(first, null);
 
         assertThatThrownBy(() -> basicUserService.createUser(duplicateUsername, null))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(DiscodeitException.class);
         assertThatThrownBy(() -> basicUserService.createUser(duplicateEmail, null))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(DiscodeitException.class);
     }
 
     @Test
@@ -167,7 +172,8 @@ public class BasicUserServiceTest {
                 new MockMultipartFile("file", "update.png", "image/png", "update-bytes".getBytes())
         );
 
-        UserUpdateRequest updateRequest = new UserUpdateRequest("afterImg", "afterImg@test.com", "5678");
+        UserUpdateRequest updateRequest = new UserUpdateRequest("afterImg", "afterImg@test.com",
+                "5678");
 
         UserDto response = basicUserService.updateUser(userId, updateRequest, imageRequest);
         flushAndClear();
@@ -175,7 +181,8 @@ public class BasicUserServiceTest {
         User user = userRepository.findById(userId).orElseThrow();
         assertThat(user.getProfile()).isNotNull();
 
-        BinaryContent content = binaryContentRepository.findById(user.getProfile().getId()).orElseThrow();
+        BinaryContent content = binaryContentRepository.findById(user.getProfile().getId())
+                .orElseThrow();
         assertThat(content.getFileName()).isEqualTo("update.png");
         assertThat(content.getContentType()).isEqualTo("image/png");
         assertThat(response.username()).isEqualTo("afterImg");
@@ -196,7 +203,8 @@ public class BasicUserServiceTest {
 
         UUID existingProfileId = userRepository.findById(userId).orElseThrow().getProfile().getId();
 
-        UserUpdateRequest updateRequest = new UserUpdateRequest("updatedUser", "updated@test.com", "5678");
+        UserUpdateRequest updateRequest = new UserUpdateRequest("updatedUser", "updated@test.com",
+                "5678");
         basicUserService.updateUser(userId, updateRequest, null);
         flushAndClear();
 
@@ -215,10 +223,11 @@ public class BasicUserServiceTest {
                 new UserCreateRequest("dupUser2", "dup2@test.com", "1234"), null
         ).id();
 
-        UserUpdateRequest updateRequest = new UserUpdateRequest("dupUser1", "new2@test.com", "5678");
+        UserUpdateRequest updateRequest = new UserUpdateRequest("dupUser1", "new2@test.com",
+                "5678");
 
         assertThatThrownBy(() -> basicUserService.updateUser(userId2, updateRequest, null))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(DiscodeitException.class);
 
         assertThat(userRepository.findById(userId1)).isPresent();
     }
@@ -240,9 +249,11 @@ public class BasicUserServiceTest {
     void testDeleteUser_clearsBidirectionalReferences() {
         User user = new User("ref-user", "1234", "ref@test.com");
         userRepository.save(user);
-        UserStatus userStatus = userStatusRepository.save(new UserStatus(user, java.time.Instant.now()));
+        UserStatus userStatus = userStatusRepository.save(
+                new UserStatus(user, java.time.Instant.now()));
         Channel channel = channelRepository.save(Channel.buildPublic("ref-channel", "desc"));
-        ReadStatus readStatus = readStatusRepository.save(new ReadStatus(user, channel, java.time.Instant.now()));
+        ReadStatus readStatus = readStatusRepository.save(
+                new ReadStatus(user, channel, java.time.Instant.now()));
         Message message = messageRepository.save(new Message(user, channel, "message"));
 
         assertThat(user.getStatus()).isEqualTo(userStatus);

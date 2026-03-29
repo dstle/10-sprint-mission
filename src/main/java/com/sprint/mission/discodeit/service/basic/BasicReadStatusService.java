@@ -10,8 +10,8 @@ import com.sprint.mission.discodeit.mapper.ReadStatusMapper;
 import com.sprint.mission.discodeit.repository.ChannelRepository;
 import com.sprint.mission.discodeit.repository.ReadStatusRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
-import com.sprint.mission.discodeit.response.ApiException;
-import com.sprint.mission.discodeit.response.ErrorCode;
+import com.sprint.mission.discodeit.exception.DiscodeitException;
+import com.sprint.mission.discodeit.exception.ErrorCode;
 import com.sprint.mission.discodeit.service.ReadStatusService;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -105,19 +105,20 @@ public class BasicReadStatusService implements ReadStatusService {
 
     private User getUserOrThrow(UUID userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND,
+                .orElseThrow(() -> new DiscodeitException(ErrorCode.USER_NOT_FOUND,
                         "사용자를 찾을 수 없습니다 userId: " + userId));
     }
 
     private Channel getChannelOrThrow(UUID channelId) {
         return channelRepository.findById(channelId)
-                .orElseThrow(() -> new ApiException(ErrorCode.CHANNEL_NOT_FOUND,
+                .orElseThrow(() -> new DiscodeitException(ErrorCode.CHANNEL_NOT_FOUND,
                         "채널을 찾을 수 없습니다 channelId: " + channelId));
     }
 
     private void validateDuplicateReadStatus(ReadStatusCreateRequest request) {
-        if (readStatusRepository.existsByUserIdAndChannelId(request.userId(), request.channelId())) {
-            throw new ApiException(ErrorCode.READ_STATUS_ALREADY_EXISTS,
+        if (readStatusRepository.existsByUserIdAndChannelId(request.userId(),
+                request.channelId())) {
+            throw new DiscodeitException(ErrorCode.READ_STATUS_ALREADY_EXISTS,
                     "이미 존재하는 readStatus 입니다 userId: " + request.userId()
                             + ", channelId: " + request.channelId());
         }
@@ -125,7 +126,7 @@ public class BasicReadStatusService implements ReadStatusService {
 
     private ReadStatus getReadStatusOrThrow(UUID readStatusId) {
         return readStatusRepository.findById(readStatusId)
-                .orElseThrow(() -> new ApiException(ErrorCode.READ_STATUS_NOT_FOUND,
+                .orElseThrow(() -> new DiscodeitException(ErrorCode.READ_STATUS_NOT_FOUND,
                         "ReadStatus 를 찾을 수 없습니다 readStatusId: " + readStatusId));
     }
 }

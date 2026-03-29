@@ -1,8 +1,8 @@
 package com.sprint.mission.discodeit.entity;
 
 import com.sprint.mission.discodeit.entity.base.BaseUpdatableEntity;
-import com.sprint.mission.discodeit.response.ApiException;
-import com.sprint.mission.discodeit.response.ErrorCode;
+import com.sprint.mission.discodeit.exception.DiscodeitException;
+import com.sprint.mission.discodeit.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
@@ -65,7 +65,7 @@ public class Message extends BaseUpdatableEntity {
 
     public void validateSender(UUID userId) {
         if (author == null || !author.getId().equals(userId)) {
-            throw new ApiException(ErrorCode.MESSAGE_SENDER_MISMATCH,
+            throw new DiscodeitException(ErrorCode.MESSAGE_SENDER_MISMATCH,
                     "메세지의 sender가 아닙니다. userId: " + userId);
         }
     }

@@ -1,8 +1,8 @@
 package com.sprint.mission.discodeit.storage;
 
 import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentDto;
-import com.sprint.mission.discodeit.response.ApiException;
-import com.sprint.mission.discodeit.response.ErrorCode;
+import com.sprint.mission.discodeit.exception.DiscodeitException;
+import com.sprint.mission.discodeit.exception.ErrorCode;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,7 +36,7 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
         try {
             Files.createDirectories(root);
         } catch (IOException e) {
-            throw new ApiException(ErrorCode.INTERNAL_ERROR,
+            throw new DiscodeitException(ErrorCode.INTERNAL_ERROR,
                     "스토리지 디렉터리 생성에 실패했습니다. path: " + root);
         }
     }
@@ -49,7 +49,7 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
             Files.write(path, bytes);
             return id;
         } catch (IOException e) {
-            throw new ApiException(ErrorCode.INTERNAL_ERROR,
+            throw new DiscodeitException(ErrorCode.INTERNAL_ERROR,
                     "바이너리 저장에 실패했습니다. binaryContentId: " + id);
         }
     }
@@ -59,14 +59,14 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
         Path path = resolvePath(id);
 
         if (!Files.exists(path)) {
-            throw new ApiException(ErrorCode.BINARY_CONTENT_NOT_FOUND,
+            throw new DiscodeitException(ErrorCode.BINARY_CONTENT_NOT_FOUND,
                     "바이너리 파일을 찾을 수 없습니다. binaryContentId: " + id);
         }
 
         try {
             return Files.newInputStream(path);
         } catch (IOException e) {
-            throw new ApiException(ErrorCode.INTERNAL_ERROR,
+            throw new DiscodeitException(ErrorCode.INTERNAL_ERROR,
                     "바이너리 로드에 실패했습니다. binaryContentId: " + id);
         }
     }
@@ -88,7 +88,7 @@ public class LocalBinaryContentStorage implements BinaryContentStorage {
                     .contentLength(binaryContentDto.size())
                     .body(resource);
         } catch (IOException e) {
-            throw new ApiException(ErrorCode.INTERNAL_ERROR,
+            throw new DiscodeitException(ErrorCode.INTERNAL_ERROR,
                     "다운로드 스트림 처리에 실패했습니다. binaryContentId: " + binaryContentDto.id());
         }
     }

@@ -12,7 +12,7 @@ import com.sprint.mission.discodeit.repository.ChannelRepository;
 import com.sprint.mission.discodeit.repository.MessageRepository;
 import com.sprint.mission.discodeit.repository.ReadStatusRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
-import com.sprint.mission.discodeit.response.ApiException;
+import com.sprint.mission.discodeit.exception.DiscodeitException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -120,7 +120,7 @@ public class BasicChannelServiceTest {
             PublicChannelUpdateRequest request = new PublicChannelUpdateRequest("수정", "설명");
 
             assertThatThrownBy(() -> channelService.updateChannelInfo(channelId, request))
-                    .isInstanceOf(ApiException.class);
+                    .isInstanceOf(DiscodeitException.class);
         }
     }
 
@@ -217,7 +217,8 @@ public class BasicChannelServiceTest {
         User user = userRepository.findById(userId1).orElseThrow();
         Channel channel = channelRepository.save(Channel.buildPrivate());
 
-        ReadStatus readStatus = readStatusRepository.save(new ReadStatus(user, channel, java.time.Instant.now()));
+        ReadStatus readStatus = readStatusRepository.save(
+                new ReadStatus(user, channel, java.time.Instant.now()));
         Message message = messageRepository.save(new Message(user, channel, "hello"));
 
         assertThat(channel.getReadStatuses()).contains(readStatus);
