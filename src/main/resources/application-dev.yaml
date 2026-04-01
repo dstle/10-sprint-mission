@@ -1,4 +1,10 @@
 spring:
+  application:
+    name: discodeit
+  boot:
+    admin:
+      client:
+        url: http://localhost:9090
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/discodeit}
     username: ${DB_USERNAME:discodeit_user}

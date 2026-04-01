@@ -3,7 +3,7 @@
     <property name="LOG_DIR" value="${user.dir}/.logs" />
     <property name="LOG_FILE" value="${LOG_DIR}/application.log" />
     <property name="LOG_PATTERN"
-              value="%d{yy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n" />
+              value="%d{yy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{requestId:-N/A} | %X{requestMethod:-N/A} | %X{requestUrl:-N/A}] - %msg%n" />
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
