@@ -9,16 +9,17 @@ import com.sprint.mission.discodeit.entity.Channel;
 import com.sprint.mission.discodeit.entity.ChannelType;
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.entity.ReadStatus;
+import com.sprint.mission.discodeit.exception.channel.ChannelNotFoundException;
+import com.sprint.mission.discodeit.exception.channel.PrivateChannelUpdateException;
 import com.sprint.mission.discodeit.mapper.ChannelMapper;
 import com.sprint.mission.discodeit.mapper.UserMapper;
 import com.sprint.mission.discodeit.repository.ChannelRepository;
-import com.sprint.mission.discodeit.exception.DiscodeitException;
-import com.sprint.mission.discodeit.exception.ErrorCode;
 import com.sprint.mission.discodeit.service.ChannelService;
 import com.sprint.mission.discodeit.service.MessageService;
 import com.sprint.mission.discodeit.service.ReadStatusService;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -140,18 +141,18 @@ public class BasicChannelService implements ChannelService {
 
     private Channel getChannelOrThrow(UUID id) {
         return channelRepository.findById(id)
-                .orElseThrow(() -> new DiscodeitException(
-                        ErrorCode.CHANNEL_NOT_FOUND,
-                        "채널을 찾을 수 없습니다 channelId: " + id
+                .orElseThrow(() -> new ChannelNotFoundException(
+                        "채널을 찾을 수 없습니다 channelId: " + id,
+                        Map.of("channelId", id)
                 ));
     }
 
     private void validateChannelType(Channel channel) {
         if (channel.isPrivate()) {
             log.warn("Private 채널 수정 시도: channelId={}", channel.getId());
-            throw new DiscodeitException(
-                    ErrorCode.CHANNEL_UPDATE_FORBIDDEN,
-                    "PRIVATE 채널은 수정할 수 없습니다. channelId: " + channel.getId()
+            throw new PrivateChannelUpdateException(
+                    "PRIVATE 채널은 수정할 수 없습니다. channelId: " + channel.getId(),
+                    Map.of("channelId", channel.getId(), "channelType", channel.getType().name())
             );
         }
     }

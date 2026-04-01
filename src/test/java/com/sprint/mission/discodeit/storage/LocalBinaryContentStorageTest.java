@@ -1,6 +1,7 @@
 package com.sprint.mission.discodeit.storage;
 
 import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentDto;
+import com.sprint.mission.discodeit.exception.binarycontent.BinaryContentNotFoundException;
 import com.sprint.mission.discodeit.exception.DiscodeitException;
 import com.sprint.mission.discodeit.exception.ErrorCode;
 import java.io.IOException;
@@ -69,11 +70,13 @@ public class LocalBinaryContentStorageTest {
         UUID id = UUID.randomUUID();
 
         assertThatThrownBy(() -> binaryContentStorage.get(id))
-                .isInstanceOf(DiscodeitException.class)
+                .isInstanceOf(BinaryContentNotFoundException.class)
                 .satisfies(ex -> {
                     DiscodeitException discodeitException = (DiscodeitException) ex;
                     assertThat(discodeitException.getErrorCode()).isEqualTo(
                             ErrorCode.BINARY_CONTENT_NOT_FOUND);
+                    assertThat(discodeitException.getDetails())
+                            .containsEntry("binaryContentId", id);
                 });
     }
 

@@ -9,16 +9,18 @@ import com.sprint.mission.discodeit.entity.BinaryContent;
 import com.sprint.mission.discodeit.entity.Channel;
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.entity.User;
+import com.sprint.mission.discodeit.exception.channel.ChannelNotFoundException;
+import com.sprint.mission.discodeit.exception.message.MessageNotFoundException;
 import com.sprint.mission.discodeit.mapper.MessageMapper;
 import com.sprint.mission.discodeit.mapper.PageResponseMapper;
 import com.sprint.mission.discodeit.repository.ChannelRepository;
 import com.sprint.mission.discodeit.repository.MessageRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
-import com.sprint.mission.discodeit.exception.DiscodeitException;
-import com.sprint.mission.discodeit.exception.ErrorCode;
+import com.sprint.mission.discodeit.exception.user.UserNotFoundException;
 import com.sprint.mission.discodeit.service.BinaryContentService;
 import com.sprint.mission.discodeit.service.MessageService;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -111,20 +113,26 @@ public class BasicMessageService implements MessageService {
 
     private User getUserOrThrow(UUID userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new DiscodeitException(ErrorCode.USER_NOT_FOUND,
-                        "사용자를 찾을 수 없습니다 userId: " + userId));
+                .orElseThrow(() -> new UserNotFoundException(
+                        "사용자를 찾을 수 없습니다 userId: " + userId,
+                        Map.of("userId", userId)
+                ));
     }
 
     private Channel getChannelOrThrow(UUID id) {
         return channelRepository.findById(id)
-                .orElseThrow(() -> new DiscodeitException(ErrorCode.CHANNEL_NOT_FOUND,
-                        "채널을 찾을 수 없습니다 channelId: " + id));
+                .orElseThrow(() -> new ChannelNotFoundException(
+                        "채널을 찾을 수 없습니다 channelId: " + id,
+                        Map.of("channelId", id)
+                ));
     }
 
     private Message getMessageOrThrow(UUID messageId) {
         return messageRepository.findById(messageId)
-                .orElseThrow(() -> new DiscodeitException(ErrorCode.MESSAGE_NOT_FOUND,
-                        "메세지를 찾을 수 없습니다 messageId: " + messageId));
+                .orElseThrow(() -> new MessageNotFoundException(
+                        "메세지를 찾을 수 없습니다 messageId: " + messageId,
+                        Map.of("messageId", messageId)
+                ));
     }
 
     private Slice<Message> getMessageSlice(UUID channelId, UUID cursor, Pageable pageable) {
@@ -172,10 +180,10 @@ public class BasicMessageService implements MessageService {
 
     private void validateCursorChannel(Message cursorMessage, UUID channelId) {
         if (!cursorMessage.getChannel().getId().equals(channelId)) {
-            throw new DiscodeitException(
-                    ErrorCode.MESSAGE_NOT_FOUND,
+            throw new MessageNotFoundException(
                     "커서 메시지가 채널에 속하지 않습니다. messageId: " + cursorMessage.getId()
-                            + ", channelId: " + channelId
+                            + ", channelId: " + channelId,
+                    Map.of("messageId", cursorMessage.getId(), "channelId", channelId)
             );
         }
     }

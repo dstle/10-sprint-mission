@@ -1,8 +1,7 @@
 package com.sprint.mission.discodeit.entity;
 
 import com.sprint.mission.discodeit.entity.base.BaseEntity;
-import com.sprint.mission.discodeit.exception.DiscodeitException;
-import com.sprint.mission.discodeit.exception.ErrorCode;
+import com.sprint.mission.discodeit.exception.binarycontent.InvalidContentTypeException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -39,11 +38,10 @@ public class BinaryContent extends BaseEntity {
     }
 
     private void validateContentType(String contentType) {
-        if (!contentType.startsWith("image/")) {
-            throw new DiscodeitException(
-                    ErrorCode.INVALID_CONTENT_TYPE,
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new InvalidContentTypeException(
                     "이미지만 업로드 가능합니다",
-                    Map.of("contentType", contentType)
+                    Map.of("contentType", contentType == null ? "null" : contentType)
             );
         }
     }

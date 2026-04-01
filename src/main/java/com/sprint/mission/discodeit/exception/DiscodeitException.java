@@ -20,7 +20,7 @@ public class DiscodeitException extends RuntimeException {
         super(message);
         this.timestamp = Instant.now();
         this.errorCode = errorCode;
-        this.details = Map.copyOf(details);
+        this.details = details == null ? Map.of() : Map.copyOf(details);
     }
 
     public DiscodeitException(
@@ -32,7 +32,7 @@ public class DiscodeitException extends RuntimeException {
         super(message, cause);
         this.timestamp = Instant.now();
         this.errorCode = errorCode;
-        this.details = Map.copyOf(details);
+        this.details = details == null ? Map.of() : Map.copyOf(details);
     }
 
     public HttpStatus getHttpStatus() {

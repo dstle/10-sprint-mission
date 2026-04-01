@@ -3,15 +3,16 @@ package com.sprint.mission.discodeit.service.basic;
 import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentDto;
 import com.sprint.mission.discodeit.dto.binarycontent.BinaryContentRequest;
 import com.sprint.mission.discodeit.entity.BinaryContent;
+import com.sprint.mission.discodeit.exception.binarycontent.BinaryContentNotFoundException;
+import com.sprint.mission.discodeit.exception.InternalDiscodeitException;
 import com.sprint.mission.discodeit.mapper.BinaryContentMapper;
 import com.sprint.mission.discodeit.repository.BinaryContentRepository;
-import com.sprint.mission.discodeit.exception.DiscodeitException;
-import com.sprint.mission.discodeit.exception.ErrorCode;
 import com.sprint.mission.discodeit.service.BinaryContentService;
 import com.sprint.mission.discodeit.storage.BinaryContentStorage;
 import com.sprint.mission.discodeit.utils.ImageBinaryConverter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -115,16 +116,23 @@ public class BasicBinaryContentService implements BinaryContentService {
 
     private void validateStoredId(UUID savedId, UUID storedId) {
         if (!savedId.equals(storedId)) {
-            throw new DiscodeitException(
-                    ErrorCode.INTERNAL_ERROR,
-                    "BinaryContent 저장 키가 일치하지 않습니다. binaryContentId: " + savedId
+            Map<String, Object> details = new java.util.LinkedHashMap<>();
+            details.put("binaryContentId", savedId);
+            if (storedId != null) {
+                details.put("storedId", storedId);
+            }
+            throw new InternalDiscodeitException(
+                    "BinaryContent 저장 키가 일치하지 않습니다. binaryContentId: " + savedId,
+                    details
             );
         }
     }
 
     private BinaryContent getBinaryContentOrThrow(UUID binaryContentId) {
         return binaryContentRepository.findById(binaryContentId)
-                .orElseThrow(() -> new DiscodeitException(ErrorCode.BINARY_CONTENT_NOT_FOUND,
-                        "BinaryContent 찾을 수 없습니다 binaryContentId: " + binaryContentId));
+                .orElseThrow(() -> new BinaryContentNotFoundException(
+                        "BinaryContent 찾을 수 없습니다 binaryContentId: " + binaryContentId,
+                        Map.of("binaryContentId", binaryContentId)
+                ));
     }
 }

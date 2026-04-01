@@ -4,8 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -19,7 +19,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleApiException(
             DiscodeitException ex
     ) {
-        log.error("API exception", ex);
+        logException(ex);
         return ResponseEntity.status(ex.getHttpStatus()).body(toErrorResponse(ex));
     }
 
@@ -27,8 +27,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException ex
     ) {
-        log.error("Illegal argument", ex);
-        InvalidRequestException converted = new InvalidRequestException(ex.getMessage(), java.util.Map.of(), ex);
+        InvalidRequestException converted = new InvalidRequestException(
+                ex.getMessage(),
+                java.util.Map.of(),
+                ex
+        );
         return handleApiException(converted);
     }
 
@@ -36,9 +39,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(
             HttpMediaTypeNotSupportedException ex
     ) {
-        log.error("Unsupported media type", ex);
         UnsupportedMediaTypeDiscodeitException converted =
-                new UnsupportedMediaTypeDiscodeitException(ex.getMessage(), java.util.Map.of(), ex);
+                new UnsupportedMediaTypeDiscodeitException(
+                        ex.getMessage(),
+                        java.util.Map.of(),
+                        ex
+                );
         return handleApiException(converted);
     }
 
@@ -46,31 +52,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException ex
     ) {
-        log.error("Validation failed", ex);
-
         java.util.Map<String, Object> validationErrors = new java.util.LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 validationErrors.put(error.getField(), error.getDefaultMessage()));
         ex.getBindingResult().getGlobalErrors().forEach(error ->
                 validationErrors.put(error.getObjectName(), error.getDefaultMessage()));
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                java.time.Instant.now(),
-                ErrorCode.INVALID_REQUEST.getCode(),
+        InvalidRequestException converted = new InvalidRequestException(
                 "요청 데이터 검증에 실패했습니다.",
                 java.util.Map.of("validationErrors", validationErrors),
-                ex.getClass().getSimpleName(),
-                ErrorCode.INVALID_REQUEST.getHttpStatus().value()
+                ex
         );
-
-        return ResponseEntity.badRequest().body(errorResponse);
+        return handleApiException(converted);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(
             Exception ex
     ) {
-        log.error("Unhandled exception", ex);
         InternalDiscodeitException converted = new InternalDiscodeitException(
                 ErrorCode.INTERNAL_ERROR.getDefaultMessage(),
                 java.util.Map.of(),
@@ -88,5 +87,14 @@ public class GlobalExceptionHandler {
                 ex.getClass().getSimpleName(),
                 ex.getHttpStatus().value()
         );
+    }
+
+    private void logException(DiscodeitException ex) {
+        if (ex.getHttpStatus().is4xxClientError()) {
+            log.warn("{} [{}]", ex.getMessage(), ex.getErrorCode().getCode(), ex);
+            return;
+        }
+
+        log.error("{} [{}]", ex.getMessage(), ex.getErrorCode().getCode(), ex);
     }
 }

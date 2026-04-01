@@ -8,15 +8,17 @@ import com.sprint.mission.discodeit.entity.BinaryContent;
 import com.sprint.mission.discodeit.entity.Message;
 import com.sprint.mission.discodeit.entity.ReadStatus;
 import com.sprint.mission.discodeit.entity.User;
+import com.sprint.mission.discodeit.exception.ErrorCode;
+import com.sprint.mission.discodeit.exception.user.UserAlreadyExistsException;
+import com.sprint.mission.discodeit.exception.user.UserNotFoundException;
 import com.sprint.mission.discodeit.mapper.UserMapper;
 import com.sprint.mission.discodeit.repository.UserRepository;
-import com.sprint.mission.discodeit.exception.DiscodeitException;
-import com.sprint.mission.discodeit.exception.ErrorCode;
 import com.sprint.mission.discodeit.service.BinaryContentService;
 import com.sprint.mission.discodeit.service.ReadStatusService;
 import com.sprint.mission.discodeit.service.UserService;
 import com.sprint.mission.discodeit.service.UserStatusService;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -122,14 +124,20 @@ public class BasicUserService implements UserService {
     private void validateDuplicateUser(UserCreateRequest request) {
         if (userRepository.existsByUsername(request.username())) {
             log.warn("중복 username으로 사용자 생성 시도: username={}", request.username());
-            throw new DiscodeitException(ErrorCode.USERNAME_ALREADY_EXISTS,
-                    "이미 존재하는 username 입니다 username: " + request.username());
+            throw new UserAlreadyExistsException(
+                    ErrorCode.USERNAME_ALREADY_EXISTS,
+                    "이미 존재하는 username 입니다 username: " + request.username(),
+                    Map.of("username", request.username())
+            );
         }
 
         if (userRepository.existsByEmail(request.email())) {
             log.warn("중복 email로 사용자 생성 시도: email={}", request.email());
-            throw new DiscodeitException(ErrorCode.EMAIL_ALREADY_EXISTS,
-                    "이미 존재하는 email 입니다. email: " + request.email());
+            throw new UserAlreadyExistsException(
+                    ErrorCode.EMAIL_ALREADY_EXISTS,
+                    "이미 존재하는 email 입니다. email: " + request.email(),
+                    Map.of("email", request.email())
+            );
         }
     }
 
@@ -151,8 +159,10 @@ public class BasicUserService implements UserService {
 
     private User getUserOrThrow(UUID userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new DiscodeitException(ErrorCode.USER_NOT_FOUND,
-                        "사용자를 찾을 수 없습니다 userId: " + userId));
+                .orElseThrow(() -> new UserNotFoundException(
+                        "사용자를 찾을 수 없습니다 userId: " + userId,
+                        Map.of("userId", userId)
+                ));
     }
 
     private void validateDuplicateUserOnUpdate(User user, UserUpdateRequest request) {
@@ -160,16 +170,22 @@ public class BasicUserService implements UserService {
         if (newUsername != null
                 && !newUsername.equals(user.getUsername())
                 && userRepository.existsByUsername(newUsername)) {
-            throw new DiscodeitException(ErrorCode.USERNAME_ALREADY_EXISTS,
-                    "이미 존재하는 username 입니다 username: " + newUsername);
+            throw new UserAlreadyExistsException(
+                    ErrorCode.USERNAME_ALREADY_EXISTS,
+                    "이미 존재하는 username 입니다 username: " + newUsername,
+                    Map.of("username", newUsername)
+            );
         }
 
         String newEmail = request.newEmail();
         if (newEmail != null
                 && !newEmail.equals(user.getEmail())
                 && userRepository.existsByEmail(newEmail)) {
-            throw new DiscodeitException(ErrorCode.EMAIL_ALREADY_EXISTS,
-                    "이미 존재하는 email 입니다. email: " + newEmail);
+            throw new UserAlreadyExistsException(
+                    ErrorCode.EMAIL_ALREADY_EXISTS,
+                    "이미 존재하는 email 입니다. email: " + newEmail,
+                    Map.of("email", newEmail)
+            );
         }
     }
 }
